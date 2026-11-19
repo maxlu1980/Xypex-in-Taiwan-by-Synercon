@@ -13405,10 +13405,12 @@ CA3D.DRESS = (function () {
     var L = grp(c); [[0.3, -d.wt / 2], [Math.max(0.5, d.hw - 0.3), -d.wt / 2], [d.hw + d.wt / 2, d.zf * 0.3], [d.hw + d.wt / 2, d.zf * 0.75]].forEach(function (q) { var t = c.mesh(new c.THREE.TorusGeometry(0.05, 0.012, 8, 16, Math.PI), st, L); t.position.set(q[0], d.H, q[1]); }); c.add(L, 'cure', 0.4, 0.7, 'show'); };
 
   /* 11 — a containment bund in a plant: the storage tank on its plinth, the outlet with its valve, a tote beside it */
-  D.in = function (c) { var d = c.d, G = grp(c), st = steel(c), tk = paint(c, 0xd9dcdf, 0.45, 0.35), bl = paint(c, 0x1f6fb2, 0.5, 0.2), x = Math.max(0.75, d.hw - 0.95), z = Math.min(d.zf - 0.75, 1.15), r = 0.55, h = 1.75;
-    c.box(x - 0.68, x + 0.68, 0, 0.12, z - 0.68, z + 0.68, c.M.formed(0.6, 0.6), G); cyl(c, r, h, 'y', x, 0.12 + h / 2, z, tk, G, 36); cyl(c, r + 0.004, 0.16, 'y', x, 0.12 + h * 0.72, z, bl, G, 36); var cap = c.mesh(new c.THREE.SphereGeometry(r, 36, 10, 0, Math.PI * 2, 0, Math.PI / 2), tk, G); cap.scale.y = 0.28; cap.position.set(x, 0.12 + h, z);
-    cyl(c, 0.045, d.hw - x - r + 0.05, 'x', (x + r + d.hw) / 2 - 0.02, 0.3, z, st, G); var wh = c.mesh(new c.THREE.TorusGeometry(0.09, 0.014, 8, 20), paint(c, 0xc6352b, 0.5), G); wh.rotation.x = Math.PI / 2; wh.position.set((x + r + d.hw) / 2, 0.44, z); cyl(c, 0.012, 0.12, 'y', (x + r + d.hw) / 2, 0.38, z, st, G, 8);
-    var tx = 0.42, tz = Math.min(d.zf - 0.45, z + 0.95); c.box(tx - 0.3, tx + 0.3, 0.1, 0.72, tz - 0.3, tz + 0.3, c.mat({ color: 0xf2f4f5, roughness: 0.35, transparent: true, opacity: 0.92 }), G); c.box(tx - 0.33, tx + 0.33, 0, 0.1, tz - 0.33, tz + 0.33, paint(c, 0x2b2d30, 0.7), G);
+  D.in = function (c) { var d = c.d, T = c.THREE, ts = !!c.P.ts, u = ts ? 2.4 : 1, G = grp(c), L = new T.Group(), st = steel(c), tk = paint(c, 0xd9dcdf, 0.45, 0.35), bl = paint(c, 0x1f6fb2, 0.5, 0.2), x = ts ? d.hw - 2.3 : Math.max(0.75, d.hw - 0.95), z = ts ? Math.min(d.zf - 2.0, 2.9) : Math.min(d.zf - 0.75, 1.15), r = 0.55, h = 1.75, run = (d.hw - x) / u;
+    /* (the tank, its outlet and the tote are modelled at the measure of the engine's own elements; at true size they stand 2.4 times as large: a tank of 2.6 m, 4.2 m high) */
+    G.add(L); L.position.set(x, 0, z); L.scale.setScalar(u); if (ts) drop(c, ['backfill', 'gw']);   /* a bund stands on the ground: nothing is backfilled */
+    c.box(-0.68, 0.68, 0, 0.12, -0.68, 0.68, c.M.formed(0.6, 0.6), L); cyl(c, r, h, 'y', 0, 0.12 + h / 2, 0, tk, L, 36); cyl(c, r + 0.004, 0.16, 'y', 0, 0.12 + h * 0.72, 0, bl, L, 36); var cap = c.mesh(new T.SphereGeometry(r, 36, 10, 0, Math.PI * 2, 0, Math.PI / 2), tk, L); cap.scale.y = 0.28; cap.position.set(0, 0.12 + h, 0);
+    cyl(c, 0.045, run - r + 0.05, 'x', (r + run) / 2 - 0.02, 0.3, 0, st, L); var wh = c.mesh(new T.TorusGeometry(0.09, 0.014, 8, 20), paint(c, 0xc6352b, 0.5), L); wh.rotation.x = Math.PI / 2; wh.position.set((r + run) / 2, 0.44, 0); cyl(c, 0.012, 0.12, 'y', (r + run) / 2, 0.38, 0, st, L, 8);
+    var tx = ts ? -1.25 : 0.42 - x, tz = ts ? 0.9 : Math.min(d.zf - 0.45, z + 0.95) - z; c.box(tx - 0.3, tx + 0.3, 0.1, 0.72, tz - 0.3, tz + 0.3, c.mat({ color: 0xf2f4f5, roughness: 0.35, transparent: true, opacity: 0.92 }), L); c.box(tx - 0.33, tx + 0.33, 0, 0.1, tz - 0.33, tz + 0.33, paint(c, 0x2b2d30, 0.7), L);
     c.add(G, 'service', 0.15, 0.5, 'show'); };
   return D;
 })();
@@ -13549,7 +13551,7 @@ CA3D.PUMP = function (T, PG, keep) { var F = XW.fleet; CA3D.fleetAdd(T, PG, F.in
     /* true size (ts: 1, metres), the structure of the site itself (home/src/52_ctx.js plotAt): 01 the inlet chamber of the pumping station — 3.2 m wide, 4.8 m deep, 0.4 m walls;
        the block shows 5 m of its length from the east end wall */
     'catank.ww': { hw: 1.6, H: 4.8, wt: 0.4, st: 0.4, zf: 5.0, level: 3.2, yG: 4.5, gw: 3.3, left: 'low', dress: 'ww', ts: 1 },
-    'catank.wt': { hw: 1.9, H: 1.35, level: 1.0, yG: 0.7, gw: 0.25, dress: 'wt' },
+    'catank.wt': { hw: 5.6, H: 5.0, wt: 0.4, st: 0.3, zf: 6.0, level: 4.4, yG: 4.0, gw: 2.2, left: 'low', dress: 'wt', ts: 1 },   /* 02 a third basin of the plant, as wide and as deep as the two that stand (11.2 m, walls of 5 m, a metre of them above the ground): its west end */
     'catank.wh': { hw: 3.6, H: 4.1, wt: 0.4, st: 0.4, zf: 4.6, level: 3.4, yG: 3.5, gw: 1.5, left: 'low', dress: 'wh', ts: 1 },   /* 03 the balancing tank beside the reservoir: 7.2 m wide, 4.1 m deep */
     /* 04 — the lining wall of the basement in the building's excavation, at its true size (home/src/20_world_a.js): 0.5 m, the first storey (3.9 m) on the kicker of the
        raft (1.2 m), cast against the west diaphragm wall; a bay of 11 m. The pit is 8.7 m deep there; the water table stands 2 m below the ground */
@@ -13571,7 +13573,7 @@ CA3D.PUMP = function (T, PG, keep) { var F = XW.fleet; CA3D.fleetAdd(T, PG, F.in
     'cawall.dm': { H: 2.4, wt: 0.5, heel: 1.5, zf: 2.3, yG: 2.25, gw: 1.0, noroad: true, dress: 'dm' },
     'cawall.mr': { H: 2.3, wt: 0.5, heel: 1.6, zf: 2.1, yG: 2.6, gw: 1.2, noroad: true, dress: 'mr' },
     'catank.pc': { from: 'cabase', hw: 1.0, H: 1.25, wt: 0.2, st: 0.25, zf: 1.5, proj: 0, yG: 0.02, gw: -1, ws: 0.06, left: 'full', dress: 'pc' },
-    'cabase.in': { hw: 1.9, H: 1.15, zf: 2.4, yG: 0.5, gw: 0.15, left: 'full', front: 'low', dress: 'in' }
+    'cabase.in': { hw: 5.0, H: 1.5, wt: 0.3, st: 0.2, zf: 6.0, proj: 0.3, yG: 0.02, gw: -0.9, left: 'none', front: 'low', dress: 'in', ts: 1 }   /* 11 the north-east corner of the containment bund: walls 0.3 m, 1.5 m high, on its slab at grade */
   };
   function cam(c, f, fy) { return { az: c.az, el: c.el, dist: c.dist * f, t: [c.t[0], c.t[1] * fy, c.t[2]] }; }
   Object.keys(V).forEach(function (k) {
@@ -23613,7 +23615,7 @@ var XYCTX = (function () {
      finished structure with it; what stands behind the block and to its right is the site. */
   function plotAt(id, O, ry) { plot(id, O, ry); var at = AT[id], pl = at.place; at.inPlace = true; at.place = function (q) { pl.call(this, q); this.o[0] = O[0]; this.o[2] = O[1]; }; }
   plotAt('catank.ww', [83.6, 66.0], -Math.PI / 2);   /* 01 the inlet chamber of the pumping station (7.2 × 3.2 m, 4.8 m deep), from its east end wall: the wet well stands to its right */
-  plot('catank.wt', [-98, 100], 0);          /* 02 south of the basins */
+  plotAt('catank.wt', [-94.8, 102.0], Math.PI / 2);  /* 02 the next basin of the plant, 4 m south of basin B and in line with it, from its west end wall: the basins stand to its right */
   plotAt('catank.wh', [-124.0, -27.6], 0);           /* 03 the balancing tank (7.2 × 7.2 m, 4.1 m deep), from its north wall: the reservoir stands to its right */
   /* 04 foundations — the lining wall of the basement, where the site shows the raft poured and the diaphragm wall bare: a bay of 11 m on the west side of the
      excavation (z = 13.5 … 24.5), the first storey of the wall (0.5 m, 3.9 m) on the kicker of the raft, cast against the diaphragm wall. Its face looks east into
@@ -23644,8 +23646,8 @@ var XYCTX = (function () {
   plotAt('capit.pw', [80.4, -26.0], Math.PI / 2);    /* 07 the cable vault (3.2 × 3.2 m, 3.1 m deep), from its west wall: the cooling cells stand to its right */
   plot('cawall.dm', [-129, -52], Math.PI / 2);   /* 08 in the bend of the canal, the dam behind */
   plot('cawall.mr', [106, 62], -Math.PI / 2);    /* 09 behind the apron of the quay, the sea and its armour ahead */
-  plot('catank.pc', [58, 60], 0);            /* 10 south-west of the yard */
-  plot('cabase.in', [-14, 103], 0);          /* 11 south-west of the bund */
+  plot('catank.pc', [60.0, 47.6], 0);        /* 10 at the south-west corner of the yard: the yard with its stock and its gantry stands behind the casting bed */
+  plotAt('cabase.in', [14.85, 76.15], 0);            /* 11 the north-east corner of the containment bund, where it stands (30 × 20 m; the tanks come when it is in service) */
   /* the crew of the site that stands in the bay of a model steps aside while the model shows its own man at work there (and comes back when another bay is shown) */
   function clearBay(id) { var at = AT[id], W0 = window.WPM3D && WPM3D[id], P = at && at.P, PL = XW.people; if (!PL || !PL.setOff) return; if (at && at.host && at.host.clear) { var cb = at.host.clear, u0 = new T.Vector3(0, 1, 0), w = new T.Vector3(); PL.setOff(function (p) { w.set(p.x - at.o[0], p.y - at.o[1], p.z - at.o[2]).applyAxisAngle(u0, -at.ry); return w.x > cb[0] && w.x < cb[1] && w.z > cb[2] && w.z < cb[3] && w.y > -0.5 && w.y < 7.5; }); return; }
     if (!at || at.ca) { PL.setOff(null); return; }
