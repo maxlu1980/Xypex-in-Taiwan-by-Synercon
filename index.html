@@ -12735,6 +12735,10 @@ var CATX = (function () {
     for (i = 0; i < 16; i++) { x = r() * W; var w2 = (0.035 + r() * 0.09) * pm, l2 = (0.3 + r() * 0.75) * pm, yt = bAt(3, x) * pm;
       wrapX(x, w2, function (X) { var g2 = q.createLinearGradient(0, yt, 0, yt + l2); g2.addColorStop(0, 'rgba(40,36,30,0.24)'); g2.addColorStop(1, 'rgba(40,36,30,0)'); q.fillStyle = g2; q.beginPath(); q.moveTo(X - w2 / 2, yt); q.lineTo(X + w2 / 2, yt); q.lineTo(X + w2 * 0.2, yt + l2); q.lineTo(X - w2 * 0.2, yt + l2); q.closePath(); q.fill(); }); }
     q.restore();
+    /* a cut deeper than the profile goes on in the dense ground at its foot: the last rows run out to one tone, so that the edge the texture is held at below them carries no streaks */
+    (function () { var n = Math.max(8, Math.round(H * 0.03)), id = q.getImageData(0, H - n, W, n), d = id.data, s = [0, 0, 0], k, y2, t; for (i = 0; i < W; i++) { k = ((n - 1) * W + i) * 4; s[0] += d[k]; s[1] += d[k + 1]; s[2] += d[k + 2]; } s = [s[0] / W, s[1] / W, s[2] / W];
+      for (y2 = 0; y2 < n; y2++) { t = Math.min(1, (y2 + 2) / n); for (i = 0; i < W; i++) { k = (y2 * W + i) * 4; d[k] += (s[0] - d[k]) * t; d[k + 1] += (s[1] - d[k + 1]) * t; d[k + 2] += (s[2] - d[k + 2]) * t; } } q.putImageData(id, 0, H - n);
+      var ib2 = qb.getImageData(0, H - n, W, n), e = ib2.data, m0 = 0; for (i = 0; i < W; i++) m0 += e[((n - 1) * W + i) * 4]; m0 /= W; for (y2 = 0; y2 < n; y2++) { t = Math.min(1, (y2 + 2) / n); for (i = 0; i < W; i++) { k = (y2 * W + i) * 4; e[k] += (m0 - e[k]) * t; e[k + 1] += (m0 - e[k + 1]) * t; e[k + 2] += (m0 - e[k + 2]) * t; } } qb.putImageData(ib2, 0, H - n); })();
     return { map: c, bump: b, TW: STRATA.TW, TH: STRATA.TH }; });
   /* the drainage gravel behind a retaining wall: crushed stone of 20–50 mm, loose. The tile is 0.45 m and closes on itself, so it reads as gravel on a face of
      any size (the engine's gravel, laid two tiles to a face several metres long, read as a wall of rubble — and Xypex is shown on concrete, not on stonework). */
@@ -12992,7 +12996,7 @@ function CAView(host, o) {
       (FL ? [[1.3, -0.86], [1.3, 0.86]] : [[0.75, -0.8], [0.75, 0.8]]).forEach(function (p) { blot(p[0], p[1], 0.36, 0.3, PG); }); blot(FL ? 1.0 : 0.6, 0, FL ? 1.9 : 1.4, 0.7, PG); blot(FL ? 2.9 : 2.3, FL ? 0.16 : 0, 0.16, 0.14, PG);
       parts.pumpAnch = [px, ty + 1.6 * S, pz];
       /* the placing hose: from the pump outlet along the ground to the edge of the bank, over the working space to the wall top; the stream of concrete from its end */
-      g.updateMatrixWorld(true); var ov = PG.localToWorld(new THREE.Vector3(-0.1, 0.45, 0.95)), hoseEnd = [P.host ? P.host.hoseX : 0.0, H + 0.45, -wt / 2], o0 = [ov.x, ov.y, ov.z];
+      g.updateMatrixWorld(true); var ov = PG.localToWorld(new THREE.Vector3(-0.1, 0.45, 0.95)), hoseEnd = [P.host ? P.host.hoseX : 0.0, H + 0.45, P.ts && !P.host ? Math.min(-wt / 2, -wt + 0.45) : -wt / 2], o0 = [ov.x, ov.y, ov.z];
       var pts = [new THREE.Vector3(o0[0], o0[1], o0[2]), new THREE.Vector3(o0[0] + 0.05, ty + 0.07, o0[2] + 0.55 * S), new THREE.Vector3(o0[0] * 0.75 + 0.1, ty + 0.06, zBank - 0.12), new THREE.Vector3(o0[0] * 0.5 + 0.1, ty + 0.1, zBank + 0.08), new THREE.Vector3(hoseEnd[0] + 0.2, Math.max(ty, H) + 0.55, (zBank - wt) / 2), new THREE.Vector3(hoseEnd[0] + 0.02, hoseEnd[1] + 0.3, hoseEnd[2] - 0.25), new THREE.Vector3(hoseEnd[0], hoseEnd[1], hoseEnd[2])];
       if (P.host) { /* the delivery line: along the ground to the edge of the shaft, over the capping beam under the guard rail, down the face of the diaphragm wall in front of the walers, the end hose to the shutter */
         var hx = hoseEnd[0] + 0.7, yy2; pts = [new THREE.Vector3(o0[0], o0[1], o0[2]), new THREE.Vector3(o0[0] + 0.05, ty + 0.07, o0[2] + 0.55 * S), new THREE.Vector3((o0[0] + hx) / 2, ty + 0.07, Math.min(o0[2] + 1.4, P.host.over[0][0] - 0.6))], lz = P.host.lineZ; P.host.over.forEach(function (q) { pts.push(new THREE.Vector3(hx, ty + q[1], q[0])); });
@@ -13283,13 +13287,15 @@ CA3D.DRESS = (function () {
      A pit deeper than a man can stand in with vertical faces is a shored pit. The two faces the block shows — behind the work and to its right — are sheet piles
      (a trough profile of 600 mm, driven below the formation), a waler of twin channels a metre below their heads with a brace across the corner, and the edge
      protection of the site along the top. When the working space is backfilled the piles are drawn. In the two sawn planes of the block the ground is seen as it is. */
+  /* a run of sheet piles from a to b in plan (a trough profile of 600 mm), the troughs towards n, from bot to top */
+  function sheetRun(c, G, m, ax, az, bx, bz, nx, nz, bot, top) { var T = c.THREE, mod = 0.6, dep = 0.2, L = Math.sqrt((bx - ax) * (bx - ax) + (bz - az) * (bz - az)), n = Math.max(1, Math.round(L / mod)), ux = (bx - ax) / L, uz = (bz - az) / L, P2 = [], I = [], i, k, prof = [[0, 0], [0.12, 0], [0.24, dep], [0.42, dep], [0.54, 0], [0.6, 0]], vi = 0;
+    for (i = 0; i < n; i++) for (k = 0; k < prof.length - 1; k++) { var s0 = (i * mod + prof[k][0]) * L / (n * mod), s1 = (i * mod + prof[k + 1][0]) * L / (n * mod), o0 = prof[k][1], o1 = prof[k + 1][1];
+        P2.push(ax + ux * s0 + nx * o0, bot, az + uz * s0 + nz * o0, ax + ux * s1 + nx * o1, bot, az + uz * s1 + nz * o1, ax + ux * s1 + nx * o1, top, az + uz * s1 + nz * o1, ax + ux * s0 + nx * o0, top, az + uz * s0 + nz * o0); I.push(vi, vi + 1, vi + 2, vi, vi + 2, vi + 3); vi += 4; }
+    var g = c.keep(new T.BufferGeometry()); g.setAttribute('position', new T.Float32BufferAttribute(P2, 3)); g.setIndex(I); g.computeVertexNormals(); var me = c.mesh(g, m, G); me.castShadow = true; me.receiveShadow = true; return me; }
+  function rustM(c) { return c.mat({ color: 0x7b5a47, roughness: 0.78, metalness: 0.35, envMapIntensity: 0.5, side: c.THREE.DoubleSide }); }
   function shoring(c) { var d = c.d, T = c.THREE, G = grp(c), top = d.yG + 0.32, bot = -c.P.st - 0.45, zB = d.zBank, xB = d.xBank, x0 = d.xCut, z1 = d.zCut, mod = 0.6, dep = 0.2,
       rust = c.mat({ color: 0x7b5a47, roughness: 0.78, metalness: 0.35, envMapIntensity: 0.5, side: T.DoubleSide }), dark = c.mat({ color: 0x5b4334, roughness: 0.82, metalness: 0.3, envMapIntensity: 0.4 }), yl = c.mat({ color: 0xf0b400, roughness: 0.55, metalness: 0.1, envMapIntensity: 0.5 });
-    /* a run of sheet piles from a to b (in plan), the troughs towards the pit (n: the side of the pit) */
-    function run(ax, az, bx, bz, nx, nz) { var L = Math.sqrt((bx - ax) * (bx - ax) + (bz - az) * (bz - az)), n = Math.max(1, Math.round(L / mod)), ux = (bx - ax) / L, uz = (bz - az) / L, P2 = [], I = [], i, k, prof = [[0, 0], [0.12, 0], [0.24, dep], [0.42, dep], [0.54, 0], [0.6, 0]], vi = 0;
-      for (i = 0; i < n; i++) for (k = 0; k < prof.length - 1; k++) { var s0 = (i * mod + prof[k][0]) * L / (n * mod), s1 = (i * mod + prof[k + 1][0]) * L / (n * mod), o0 = prof[k][1], o1 = prof[k + 1][1];
-          P2.push(ax + ux * s0 + nx * o0, bot, az + uz * s0 + nz * o0, ax + ux * s1 + nx * o1, bot, az + uz * s1 + nz * o1, ax + ux * s1 + nx * o1, top, az + uz * s1 + nz * o1, ax + ux * s0 + nx * o0, top, az + uz * s0 + nz * o0); I.push(vi, vi + 1, vi + 2, vi, vi + 2, vi + 3); vi += 4; }
-      var g = c.keep(new T.BufferGeometry()); g.setAttribute('position', new T.Float32BufferAttribute(P2, 3)); g.setIndex(I); g.computeVertexNormals(); var m = c.mesh(g, rust, G); m.castShadow = true; m.receiveShadow = true; return m; }
+    function run(ax, az, bx, bz, nx, nz) { return sheetRun(c, G, rust, ax, az, bx, bz, nx, nz, bot, top); }
     run(x0, zB, xB, zB, 0, 1); run(xB, zB, xB, z1, -1, 0);
     var wy = d.yG - 1.0, wz = zB + dep + 0.13, wx = xB - dep - 0.13;
     [-0.11, 0.11].forEach(function (o) { c.box(x0, xB - dep, wy + o - 0.09, wy + o + 0.09, wz - 0.11, wz + 0.11, dark, G); c.box(wx - 0.11, wx + 0.11, wy + o - 0.09, wy + o + 0.09, zB + dep, z1, dark, G); });
@@ -13360,7 +13366,18 @@ CA3D.DRESS = (function () {
     c.add(G, 'service', 0.3, 0.6, 'show'); };
 
   /* 06 — a bridge abutment: the bearings on the seat, the girders, the deck with its surfacing and its parapet, the back wall that holds the fill */
-  D.br = function (c) { var d = c.d, G = grp(c), x0 = c.cx0(d.xl), x1 = d.xr, zc = d.zCut, yS = d.H, pad = paint(c, 0x17181a, 0.8), asp = paint(c, 0x2a2b2e, 0.9);
+  /* 06 at the true size of the site's abutment: the lift the guide casts is the first of the stem. In service the stem stands to the bearing shelf (10.5 m), the back wall
+     (0.75 m) rises behind the shelf to the road, the bearings carry four girders (0.7 × 1.6 m) and the deck (0.25 m) with its surfacing and parapet; the approach is filled behind */
+  D.brTrue = function (c) { var d = c.d, G = grp(c), x0 = c.cx0(d.xl), x1 = d.xr, zc = d.zCut, yS = 10.5, wt = d.wt, pad = paint(c, 0x17181a, 0.8), asp = paint(c, 0x2a2b2e, 0.9), stl = steel(c), fm = function (a, b) { return c.M.formed(Math.max(1, a / 2.4), Math.max(1, b / 2.4)); };
+    drop(c, ['road', 'salt']);
+    c.add(conc(c.box(x0, x1, d.H, yS, -wt, 0, [fm(wt, yS - d.H), c.M.sawn, fm(x1 - x0, wt), fm(x1 - x0, wt), fm(x1 - x0, yS - d.H), fm(x1 - x0, yS - d.H)])), 'service', 0.0, 0.3, 'fade');           /* the lifts above */
+    c.add(conc(c.box(x0, x1, yS, yS + 2.9, -wt, -wt + 0.75, fm(x1 - x0, 2.9))), 'service', 0.15, 0.4, 'fade');                                                                              /* the back wall */
+    [-4.2, -1.4, 1.4, 4.2].forEach(function (x) { if (x - 0.5 < x0) return; c.box(x - 0.4, x + 0.4, yS, yS + 0.4, -wt + 1.3, -wt + 2.1, c.M.formed(0.4, 0.3), G); c.box(x - 0.26, x + 0.26, yS + 0.4, yS + 0.57, -wt + 1.44, -wt + 1.96, pad, G); c.box(x - 0.31, x + 0.31, yS + 0.57, yS + 0.6, -wt + 1.39, -wt + 2.01, stl, G);
+      c.box(x - 0.35, x + 0.35, yS + 0.6, yS + 2.2, -wt + 0.95, zc, c.M.formed(0.5, 1.0), G); });                                                                                             /* plinth, bearing, sole plate; the girder */
+    c.box(x0, x1, yS + 2.2, yS + 2.45, -wt + 0.8, zc, c.M.formed(4, 2), G); c.box(x0, x1 - 0.42, yS + 2.45, yS + 2.53, -wt + 0.8, zc, asp, G); c.box(x1 - 0.4, x1, yS + 2.45, yS + 3.45, -wt + 0.8, zc, c.M.formed(0.3, 0.8), G);
+    c.add(G, 'service', 0.4, 0.75, 'show');
+    var fm2 = function (w, h) { return c.M.earthAt(Math.max(1, w), Math.max(1, h), false); }, e1 = c.box(x0, x1, d.yG - 0.15, yS + 2.5, d.farZ, -wt, [fm2(18, 11), fm2(18, 11), fm2(12, 18), fm2(12, 18), fm2(12, 11), fm2(12, 11)], c.g, { noCast: true }); if (e1) c.add(e1, 'service', 0.55, 0.98, 'rise'); };   /* the approach behind it: compacted fill (no profile of natural ground) */
+  D.br = function (c) { if (c.P.ts) return D.brTrue(c); var d = c.d, G = grp(c), x0 = c.cx0(d.xl), x1 = d.xr, zc = d.zCut, yS = d.H, pad = paint(c, 0x17181a, 0.8), asp = paint(c, 0x2a2b2e, 0.9);
     drop(c, ['road', 'salt']);
     c.add(conc(c.box(x0, x1, yS, yS + 0.9, -d.wt, -d.wt + 0.16, c.M.formed(1.8, 0.5))), 'service', 0.0, 0.25, 'fade');
     [0.45, Math.min(d.hw - 0.4, 1.35)].forEach(function (x) { c.box(x - 0.16, x + 0.16, yS, yS + 0.07, -d.wt + 0.3, -0.05, pad, G); c.box(x - 0.2, x + 0.2, yS + 0.07, yS + 0.67, -d.wt + 0.2, zc, c.M.formed(0.3, 0.5), G); c.box(x - 0.34, x + 0.34, yS + 0.59, yS + 0.67, -d.wt + 0.2, zc, c.M.formed(0.5, 0.2), G); });
@@ -13368,7 +13385,16 @@ CA3D.DRESS = (function () {
     c.box(x1 - 0.3, x1, yS + 0.87, yS + 1.65, -d.wt + 0.18, zc, c.M.formed(0.3, 0.6), G); c.add(G, 'service', 0.25, 0.6, 'show'); };
 
   /* 08 — a spillway: the training wall and the chute it guides, the baffle blocks, the gate in its guides with the hoist above, the water coming down */
-  D.dm = function (c) { var d = c.d, G = grp(c), st = steel(c), x0 = c.cx0(d.xl), x1 = d.xr, zc = d.zCut, gm = paint(c, 0x24507c, 0.5, 0.4);
+  /* 08 at the true size of the site's spillway: the first lift of the training wall with the basin slab in front of it. In service the wall stands to its height — it
+     falls from 8.6 m at the dam's side of the bay to 5.5 m at its downstream end —, the baffle blocks (0.9 m) stand on the slab and the water comes down the basin */
+  D.dmTrue = function (c) { var d = c.d, T = c.THREE, G = grp(c), x0 = c.cx0(d.xl), x1 = d.xr, zc = d.zCut, wt = d.wt, k;
+    drop(c, ['road', 'salt']);
+    var sh = new T.Shape(), hx = function (x) { return 5.5 + (8.6 - 5.5) * (x - d.xl) / (x1 - d.xl); }; sh.moveTo(x0, d.H); sh.lineTo(x1, d.H); sh.lineTo(x1, hx(x1)); sh.lineTo(x0, hx(x0)); sh.closePath();
+    var ug = c.keep(new T.ExtrudeGeometry(sh, { depth: wt, bevelEnabled: false })), um = c.M.formed(4, 2), up = c.mesh(ug, um, c.g); up.position.z = -wt; up.castShadow = true; up.receiveShadow = true; (function () { var uv = ug.attributes.uv, i; for (i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) / 2.4, uv.getY(i) / 2.4); })(); c.add(conc(up), 'service', 0.0, 0.3, 'fade');
+    for (k = 0; k < 4; k++) { var xb = x0 + 1.4 + 2.6 * k; if (xb + 0.9 < x1) c.box(xb, xb + 0.9, 0, 0.9, d.zf * 0.55, d.zf * 0.55 + 0.9, c.M.formed(0.5, 0.5), G); }
+    c.add(G, 'service', 0.05, 0.35, 'show');
+    var w = water(c, x0, x1, 0.005, 1.7, 0.003, zc, 0x9cc4d2); c.add(w[0], 'service', 0.45, 0.95, 'rise'); c.add(w[1], 'service', 0.93, 0.96, 'show'); };
+  D.dm = function (c) { if (c.P.ts) return D.dmTrue(c); var d = c.d, G = grp(c), st = steel(c), x0 = c.cx0(d.xl), x1 = d.xr, zc = d.zCut, gm = paint(c, 0x24507c, 0.5, 0.4);
     drop(c, ['road', 'salt']);
     var k; for (k = 0; k < 3; k++) { var xb = Math.max(x0 + 0.2, 0.15) + 0.62 * k; if (xb + 0.34 < x1) c.box(xb, xb + 0.34, 0, 0.38, d.zf * 0.5, d.zf * 0.5 + 0.34, c.M.formed(0.35, 0.35), G); }
     var xg = Math.min(x1 - 0.35, 0.2 + 0.62 * 3 + 0.25); c.box(xg, xg + 0.07, 0.03, d.H * 0.62, 0.06, zc - 0.02, gm, G); c.box(xg - 0.05, xg + 0.12, 0, d.H + 0.9, 0, 0.1, st, G); c.box(xg - 0.05, xg + 0.12, d.H + 0.78, d.H + 0.9, 0, zc, st, G); cyl(c, 0.03, d.H * 0.5 + 0.8, 'y', xg + 0.035, d.H * 0.62 + (d.H * 0.38 + 0.8) / 2, zc * 0.5, st, G); cyl(c, 0.16, 0.05, 'x', xg + 0.2, d.H + 1.0, zc * 0.5, paint(c, 0xc6352b, 0.5), G);
@@ -13376,7 +13402,18 @@ CA3D.DRESS = (function () {
     var w = water(c, x0, x1, 0.005, d.H * 0.42, 0.003, zc, 0x9cc4d2); c.add(w[0], 'service', 0.45, 0.95, 'rise'); c.add(w[1], 'service', 0.93, 0.96, 'show'); };
 
   /* 09 — a quay: the capping beam, the fenders and the bollard, the apron on the fill, the sea at the wall with the zone the tide wets and dries */
-  D.mr = function (c) { var d = c.d, G = grp(c), x0 = c.cx0(d.xl), x1 = d.xr, zc = d.zCut, sea = d.H * 0.52, rub = paint(c, 0x121314, 0.85), ir = paint(c, 0x2c2e31, 0.55, 0.6);
+  /* 09 at the true size of the site's quay: the bay is cast in the dry — sheet piles across the front of the wall at the end of the quay hold the sea back and are drawn
+     when the bay is flooded. In service: the cope, fenders every three metres, a bollard, the apron on the fill, the sea at its level (4.6 m above the foot of the wall) */
+  D.mrTrue = function (c) { var d = c.d, G = grp(c), x0 = c.cx0(d.xl), x1 = d.xr, zc = d.zCut, sea = c.P.gw, wt = d.wt, rub = paint(c, 0x121314, 0.85), ir = paint(c, 0x2c2e31, 0.55, 0.6), CF = grp(c);
+    drop(c, ['road', 'salt']);
+    if (!c.cut) { sheetRun(c, CF, rustM(c), x1 - 0.02, 0.05, x1 - 0.02, zc, -1, 0, -1.2, sea + 1.3); c.add(CF, 'service', 0.0, 0.42, 'gone'); }
+    c.add(conc(c.box(x0, x1, d.H, d.H + 0.8, -wt, 0.2, c.M.formed(4, 0.5))), 'service', 0.0, 0.3, 'fade');
+    [-4.5, -1.5, 1.5, 4.5].forEach(function (x) { if (x - 0.3 < x0) return; c.box(x - 0.2, x + 0.2, sea - 1.2, d.H + 0.4, 0.2, 0.5, rub, G); c.box(x - 0.26, x + 0.26, sea - 1.2, d.H + 0.4, 0.14, 0.22, ir, G); });
+    var xb = Math.max(x0 + 0.8, 3.0); cyl(c, 0.17, 0.5, 'y', xb, d.H + 1.05, -0.9, ir, G); cyl(c, 0.3, 0.12, 'y', xb, d.H + 1.34, -0.9, ir, G); cyl(c, 0.28, 0.05, 'y', xb, d.H + 0.825, -0.9, ir, G);
+    var tide = c.mat({ color: 0x2c3a30, transparent: true, opacity: 0.42, roughness: 0.35, depthWrite: false }); var tb = c.box(x0, x1, sea - 1.1, sea + 0.7, 0.002, 0.006, tide, G, { noCast: true }); if (tb) tb.renderOrder = 2; c.add(G, 'service', 0.2, 0.5, 'show');
+    var ap = c.box(x0, x1, d.H, d.H + 0.8, d.farZ, -wt, c.M.formed(4, 6), c.g, { noCast: true }); c.add(conc(ap), 'service', 0.75, 0.98, 'fade');
+    var w = water(c, x0, x1, -0.015, sea, 0.004, zc, 0x5f9aa8); c.add(w[0], 'service', 0.4, 0.95, 'rise'); c.add(w[1], 'service', 0.93, 0.96, 'show'); };
+  D.mr = function (c) { if (c.P.ts) return D.mrTrue(c); var d = c.d, G = grp(c), x0 = c.cx0(d.xl), x1 = d.xr, zc = d.zCut, sea = d.H * 0.52, rub = paint(c, 0x121314, 0.85), ir = paint(c, 0x2c2e31, 0.55, 0.6);
     drop(c, ['road', 'salt']);
     c.add(conc(c.box(x0, x1, d.H, d.H + 0.32, -d.wt - 0.2, 0.14, c.M.formed(1.8, 0.3))), 'service', 0.0, 0.3, 'fade');
     [0.5, Math.min(x1 - 0.4, 1.35)].forEach(function (x) { c.box(x - 0.13, x + 0.13, sea - 0.25, d.H + 0.05, 0.14, 0.32, rub, G); c.box(x - 0.17, x + 0.17, sea - 0.25, d.H + 0.05, 0.1, 0.15, ir, G); });
@@ -13399,7 +13436,7 @@ CA3D.DRESS = (function () {
   D.pc = function (c) { var d = c.d, G = grp(c), st = steel(c), yl = paint(c, 0xe0a81c, 0.5, 0.3), y0 = d.yG + 0.021;
     c.box(d.xCut, d.farX, y0, y0 + 0.03, d.farZ, d.zBank, c.M.formed(4, 4), G, { noCast: true }); c.box(d.xBank, d.farX, y0, y0 + 0.03, d.zBank, d.zCut, c.M.formed(1.5, 2), G, { noCast: true });
     var ux = Math.max(0.4, d.xBank + 0.5), k; for (k = 0; k < 2; k++) { var z = d.zBank - 1.4 - k * 1.7, xa = Math.max(0.3, c.cx0(d.xl) + 0.3); c.box(xa, xa + 1.5, y0 + 0.14, y0 + 0.34, z - 1.2, z, c.M.formed(1, 0.3), G); c.box(xa, xa + 0.18, y0 + 0.34, y0 + 1.3, z - 1.2, z, c.M.formed(0.3, 0.8), G); c.box(xa + 1.32, xa + 1.5, y0 + 0.34, y0 + 1.3, z - 1.2, z, c.M.formed(0.3, 0.8), G); c.box(xa + 0.1, xa + 0.25, y0 + 0.03, y0 + 0.14, z - 1.2, z, paint(c, 0x8a6a42, 0.9), G); c.box(xa + 1.25, xa + 1.4, y0 + 0.03, y0 + 0.14, z - 1.2, z, paint(c, 0x8a6a42, 0.9), G); }
-    var gx0 = Math.max(0.15, c.cx0(d.xl) - 0.5), gx1 = d.xBank + 1.2, gz = d.zf * 0.5, gh = d.H + 2.0; [gx0, gx1].forEach(function (x) { c.box(x - 0.09, x + 0.09, y0, gh, gz - 0.09, gz + 0.09, yl, G); c.box(x - 0.09, x + 0.09, y0, y0 + 0.12, gz - 0.7, gz + 0.7, yl, G); }); c.box(gx0 - 0.09, gx1 + 0.09, gh, gh + 0.26, gz - 0.13, gz + 0.13, yl, G);
+    var gx0 = c.cut ? 0.15 : d.xl - 0.5, gx1 = d.xBank + 1.2,   /* the gantry stands astride the unit (in the sawn view its near leg stands just behind the plane) */ gz = d.zf * 0.5, gh = d.H + 2.0; [gx0, gx1].forEach(function (x) { c.box(x - 0.09, x + 0.09, y0, gh, gz - 0.09, gz + 0.09, yl, G); c.box(x - 0.09, x + 0.09, y0, y0 + 0.12, gz - 0.7, gz + 0.7, yl, G); }); c.box(gx0 - 0.09, gx1 + 0.09, gh, gh + 0.26, gz - 0.13, gz + 0.13, yl, G);
     var hx = (gx0 + gx1) / 2; c.box(hx - 0.18, hx + 0.18, gh - 0.2, gh, gz - 0.16, gz + 0.16, st, G); cyl(c, 0.012, 0.9, 'y', hx, gh - 0.65, gz, st, G, 8); c.box(hx - 0.06, hx + 0.06, gh - 1.2, gh - 1.08, gz - 0.04, gz + 0.04, yl, G);
     c.add(G, 'always');
     var L = grp(c); [[0.3, -d.wt / 2], [Math.max(0.5, d.hw - 0.3), -d.wt / 2], [d.hw + d.wt / 2, d.zf * 0.3], [d.hw + d.wt / 2, d.zf * 0.75]].forEach(function (q) { var t = c.mesh(new c.THREE.TorusGeometry(0.05, 0.012, 8, 16, Math.PI), st, L); t.position.set(q[0], d.H, q[1]); }); c.add(L, 'cure', 0.4, 0.7, 'show'); };
@@ -13568,11 +13605,18 @@ CA3D.PUMP = function (T, PG, keep) { var F = XW.fleet; CA3D.fleetAdd(T, PG, F.in
       cams: { cam: { az: -10, el: 15, dist: 15.5, t: [0.5, 3.4, 0.3] }, camC: { az: -60, el: 13, dist: 13.5, t: [0.6, 3.4, 2.0] },
         camS: { pour: { az: -63, el: 10, dist: 38, t: [0.6, 9.2, 0.5] }, heal: { az: -56, el: 9, dist: 7.2, t: [0.4, 2.7, -0.2] } },
         camF: { pour: { az: -5, el: 42, dist: 41, t: [-2.0, 11.5, -7.0] }, service: { az: -77, el: 8, dist: 9.5, t: [2.0, 2.9, 3.1] }, heal: { az: -34, el: 6, dist: 8.6, t: [0.6, 2.8, 0] } } } },
-    'cawall.br': { H: 2.2, wt: 0.9, heel: 1.6, zf: 1.5, yG: 2.9, gw: 0.3, noroad: true, dress: 'br' },
+    /* 06 — the south abutment of the bridge, where it stands (home/src/21_world_b.js: a stem 2.95 m thick, 10.5 m from its footing to the bearing shelf, 14.8 m wide). A wall of
+       that height is cast in lifts: the guide builds the first one (4 m) on the footing; in service the stem stands to its height with the back wall, the girders and the deck */
+    'cawall.br': { hw: 6.0, H: 4.0, wt: 2.95, st: 1.0, heel: 3.9, zf: 1.2, yG: 2.15, gw: 0.6, noroad: true, dress: 'br', ts: 1, camFx: { service: { az: -40, el: 16, dist: 42, t: [0, 6.6, -1.5] } } },
     'capit.pw': { hw: 1.6, H: 3.1, wt: 0.4, st: 0.3, zf: 3.2, yG: 3.08, gw: 2.6, nofit: true, dress: 'pw', ts: 1 },   /* 07 the cable vault: 3.2 × 3.2 m, 3.1 m deep */
-    'cawall.dm': { H: 2.4, wt: 0.5, heel: 1.5, zf: 2.3, yG: 2.25, gw: 1.0, noroad: true, dress: 'dm' },
-    'cawall.mr': { H: 2.3, wt: 0.5, heel: 1.6, zf: 2.1, yG: 2.6, gw: 1.2, noroad: true, dress: 'mr' },
-    'catank.pc': { from: 'cabase', hw: 1.0, H: 1.25, wt: 0.2, st: 0.25, zf: 1.5, proj: 0, yG: 0.02, gw: -1, ws: 0.06, left: 'full', dress: 'pc' },
+    /* 08 — the downstream bay of the south training wall of the spillway with the slab of the stilling basin in front of it (1.2 m thick, 9.1 to 6 m high there, the slab 0.5 m):
+       the first lift (4 m); in service the wall stands to its height and the water comes down the basin */
+    'cawall.dm': { hw: 6.0, H: 4.0, wt: 1.2, st: 0.5, heel: 2.4, zf: 6.0, yG: 6.65, gw: 3.0, noroad: true, dress: 'dm', ts: 1, camFx: { service: { az: -40, el: 20, dist: 31, t: [0, 3.4, 1.0] } } },
+    /* 09 — the next bay of the quay wall at its south end (3 m thick, 6.5 m high, the apron 0.8 m over it; the sea stands 4.6 m above its foot), cast in the dry behind sheet piles */
+    'cawall.mr': { hw: 6.0, H: 6.5, wt: 3.0, st: 0.8, heel: 3.7, zf: 1.0, yG: 7.3, gw: 4.6, noroad: true, dress: 'mr', ts: 1, camFx: { service: { az: -38, el: 20, dist: 31, t: [0, 3.8, 0.5] } } },
+    /* 10 — a chamber unit of the yard's own size (the chamber the coating guide repairs: 3.2 m square inside, walls of 0.4 m, a base of 0.3 m), 2.8 m high, on the casting bed;
+       at the engine's measure (a wall of 2.8 m: 1 m is 0.446 here) */
+    'catank.pc': { from: 'cabase', hw: 0.71, H: 1.25, wt: 0.18, st: 0.14, zf: 1.43, proj: 0, yG: 0.02, gw: -1, ws: 0.06, left: 'full', dress: 'pc' },
     'cabase.in': { hw: 5.0, H: 1.5, wt: 0.3, st: 0.2, zf: 6.0, proj: 0.3, yG: 0.02, gw: -0.9, left: 'none', front: 'low', dress: 'in', ts: 1 }   /* 11 the north-east corner of the containment bund: walls 0.3 m, 1.5 m high, on its slab at grade */
   };
   function cam(c, f, fy) { return { az: c.az, el: c.el, dist: c.dist * f, t: [c.t[0], c.t[1] * fy, c.t[2]] }; }
@@ -13581,6 +13625,7 @@ CA3D.PUMP = function (T, PG, keep) { var F = XW.fleet; CA3D.fleetAdd(T, PG, F.in
     for (q in b) p[q] = b[q]; for (q in o) if (q !== 'from') p[q] = o[q];
     f = Math.max(1, p.H / b.H, p.hw / b.hw, p.ts ? 0 : (p.yG || 0) / (b.yG || 1), b.retain ? (p.zf + 1.2) / (b.zf + 1.2) : p.zf / b.zf);   /* (at true size the depth of the pit is in the height already) */ f = 1 + (f - 1) * 0.85; fy = Math.max(0.7, p.H / b.H);
     p.cam = cam(b.cam, f, fy); p.camC = cam(b.camC, f, fy); p.camS = {}; for (q in b.camS) p.camS[q] = cam(b.camS[q], f, fy); p.camF = {}; for (q in b.camF) p.camF[q] = cam(b.camF[q], f, fy);
+    if (p.camFx) for (q in p.camFx) p.camF[q] = p.camFx[q];   /* a stage that shows more than the lift that is cast is looked at from further off */
     if (p.cams) { p.cam = p.cams.cam; p.camC = p.cams.camC; p.camS = p.cams.camS; p.camF = p.cams.camF; }   /* an element in the site's own structure is looked at from where a man can stand there */
     A[k] = p;
   });
@@ -23613,7 +23658,8 @@ var XYCTX = (function () {
   /* The block of a structure the site shows finished stands where that structure stands, at its true size: the guide builds what the site has. O: the point of the
      site at the element's origin (the middle of the foot of the back wall's inner face). The quarter the block is looked at from is clear as for every plot — the
      finished structure with it; what stands behind the block and to its right is the site. */
-  function plotAt(id, O, ry) { plot(id, O, ry); var at = AT[id], pl = at.place; at.inPlace = true; at.place = function (q) { pl.call(this, q); this.o[0] = O[0]; this.o[2] = O[1]; }; }
+  function plotAt(id, O, ry, gone) { plot(id, O, ry); var at = AT[id], pl = at.place; at.inPlace = true; at.place = function (q) { pl.call(this, q); this.o[0] = O[0]; this.o[2] = O[1]; };
+    if (gone) at.hide = function () { var H = {}, i; for (i = 0; i < gone.length; i++) H[gone[i]] = true; return H; }; }   /* gone: the parts of the finished structure that reach out of the cleared quarter */
   plotAt('catank.ww', [83.6, 66.0], -Math.PI / 2);   /* 01 the inlet chamber of the pumping station (7.2 × 3.2 m, 4.8 m deep), from its east end wall: the wet well stands to its right */
   plotAt('catank.wt', [-94.8, 102.0], Math.PI / 2);  /* 02 the next basin of the plant, 4 m south of basin B and in line with it, from its west end wall: the basins stand to its right */
   plotAt('catank.wh', [-124.0, -27.6], 0);           /* 03 the balancing tank (7.2 × 7.2 m, 4.1 m deep), from its north wall: the reservoir stands to its right */
@@ -23642,10 +23688,10 @@ var XYCTX = (function () {
   host('cawall.tn', [39.8, -17.696, -34.3], Math.PI / 2, { gy: 17.7, gone: ['tn.bayW'], xp: ['tn.wallW', 'tn.slab'], clear: [-5.8, 5.8, -0.2, 5.6],
     caps: [['conc', -1.8, -7.3, -0.8, 18.1], ['conc', 13.2, -7.3, 14.2, 18.1], ['conc', 6.0, -0.9, 13.2, 0], ['lean', -0.8, -1.15, 13.2, -0.9], ['soil', -46, -12, -1.8, 17.7], ['soil', 14.2, -12, 50, 17.7], ['soil', -1.8, -12, 14.2, -7.3], ['soil', -0.8, -7.3, 13.2, -1.15], ['gw', -46, -12, -1.8, 14.2], ['gw', 14.2, -12, 50, 14.2]],
     hide: function (cam, cut, st) { var L = []; if (cam.z > 5.6 || (st.svc || 0) > 0.02) L.push('tn.bayC', 'tn.kings'); if (cam.z > 11.9 || (st.svc || 0) > 0.02) L.push('tn.bayE'); if (cam.z > 13.0) L.push('tn.wallE'); if (!cut && cam.y > 7.7) L.push('tn.struts'); if (cam.z > 8.5) L.push('tn.stair'); return L; } });
-  plot('cawall.br', [-74, -56], 0);          /* 06 west of the approach, before the south abutment */
+  plotAt('cawall.br', [-55, -63.9], Math.PI, ['br.abut', 'br.earW', 'br.deck']);   /* 06 the south abutment, where it stands: its face looks north over the river; the approach stands behind it */
   plotAt('capit.pw', [80.4, -26.0], Math.PI / 2);    /* 07 the cable vault (3.2 × 3.2 m, 3.1 m deep), from its west wall: the cooling cells stand to its right */
-  plot('cawall.dm', [-129, -52], Math.PI / 2);   /* 08 in the bend of the canal, the dam behind */
-  plot('cawall.mr', [106, 62], -Math.PI / 2);    /* 09 behind the apron of the quay, the sea and its armour ahead */
+  plotAt('cawall.dm', [-149, -75.0], Math.PI);       /* 08 the downstream bay of the south training wall of the spillway: its face looks north into the basin; the wall and the dam stand to its right */
+  plotAt('cawall.mr', [128.0, 118.0], Math.PI / 2);  /* 09 the next bay of the quay wall beyond its south end: its face looks east to the sea; the quay stands to its right */
   plot('catank.pc', [60.0, 47.6], 0);        /* 10 at the south-west corner of the yard: the yard with its stock and its gantry stands behind the casting bed */
   plotAt('cabase.in', [14.85, 76.15], 0);            /* 11 the north-east corner of the containment bund, where it stands (30 × 20 m; the tanks come when it is in service) */
   /* the crew of the site that stands in the bay of a model steps aside while the model shows its own man at work there (and comes back when another bay is shown) */
