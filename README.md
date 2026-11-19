@@ -21,7 +21,8 @@
 **產品指南**
 - 表面塗佈・修補與配件：Xypex Concentrate、Modified、Concentrate Dry-Pac、Patch'n Plug、Megamix I／II、Gamma Cure、Xycrylic Admix、Quickset、FCM 80
 - 摻料：Xypex Admix C-Series（C-500／C-1000／C-2000 及 NF 版）、Bio-San C500
-- 應用情境、施工程序、3D 模型（含 X-ray）、實作模擬器
+- 應用情境、施工程序、3D 模型（含 X-ray）、實作模擬器；人員、材料桶與首頁工地為同一套模型
+- 「工地現場」視窗可直接進入各領域的子工地
 
 **比較與文件**
 - 同類產品逐項數值對照（附每筆數值的來源與讀取日期，只做同基準比較）
@@ -32,7 +33,7 @@
 
 - [全面需求檢核報告](docs/REVIEW.md)：自 2026-11-09 起的全部需求、對應改善與驗證結果
 - [版本紀錄](CHANGELOG.md)
-- 目前版本：**v42**（2026-11-18）
+- 目前版本：**v43**（2026-11-19）
 
 ## 檔案結構
 

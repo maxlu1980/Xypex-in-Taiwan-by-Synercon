@@ -1621,6 +1621,21 @@ html[lang="zh-Hant-TW"] .sec-sub{line-height:36px}
 .xy-snapwait--fig{aspect-ratio:560/381}
 @keyframes xy-snapwait{from{background-position:120% 0}to{background-position:-100% 0}}
 @media (prefers-reduced-motion:reduce){.xy-snapwait{animation:none}}
+/* a 3D stage before its first picture, and while the jobsite round its element is brought in */
+.is-3dwait::after{content:attr(data-wait);position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;background:var(--surface-panel);color:var(--ink);font:500 14px/1.4 var(--font-sans);letter-spacing:.02em;pointer-events:none}
+.is-sitewait::before{content:attr(data-sitewait);position:absolute;left:10px;top:50%;transform:translateY(-50%);z-index:3;padding:5px 10px;background:rgba(0,0,0,.72);color:#fff;font:500 12px/1.3 var(--font-sans);border-left:3px solid var(--xy-cyan,#00aeef);pointer-events:none;animation:xySiteWait 1.2s ease-in-out infinite alternate}
+@keyframes xySiteWait{from{opacity:.55}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.is-sitewait::before{animation:none}}
+/* the jobs of an area, under the window onto the site */
+.xs-site__subs{margin:10px 0 0}
+.xs-site__subs[hidden]{display:none}
+.xs-site__subs p{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.xs-site__subs p span{font-weight:700;margin-right:4px}
+.xs-site__subs small{display:block;margin:8px 0 0;font-size:13px;line-height:1.5;opacity:.82}
+.xs-sub{appearance:none;min-height:40px;padding:6px 14px;border:1px solid var(--xy-blue);background:transparent;color:var(--xy-link);font:inherit;font-weight:700;font-size:14px;cursor:pointer;border-radius:0}
+.xs-sub:hover{background:var(--xy-tint)}
+.xs-sub.is-on{background:var(--xy-blue);color:#fff}
+.xs-sub:focus-visible{outline:2px solid var(--xy-cyan);outline-offset:2px}
 
 /* the hands of the 3D models (xynav.js) */
 .xynav-bar{appearance:none;position:absolute;left:50%;top:10px;transform:translateX(-50%);max-width:calc(100% - 24px);padding:7px 12px;border:0;border-radius:0;background:rgba(0,117,201,.94);color:#fff;font:500 12px/17px var(--font-sans,system-ui);cursor:pointer;z-index:9;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.xynav-bar.is-on{opacity:1;visibility:visible}.xynav-tip{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);max-width:calc(100% - 24px);padding:7px 12px;background:rgba(0,0,0,.8);color:#fff;font:400 12px/17px var(--font-sans,system-ui);pointer-events:none;z-index:9;opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s;text-align:center}.xynav-tip.is-on{opacity:1;visibility:visible}
@@ -4393,6 +4408,7 @@ function greyNoise(w, h, rnd, lo, hi) {
 function smoothNoise(nx, ny, rnd, lo, hi, maxW, maxH) {
   var px = Math.max(1, Math.min(8, Math.floor(maxW / nx))), py = Math.max(1, Math.min(8, Math.floor(maxH / ny))), w = nx * px, h = ny * py, c = mkCanvas(w, h), g = c.getContext('2d'), im = g.createImageData(w, h), d = im.data;
   var lat = new Float32Array((nx + 1) * (ny + 1)), i, x, y; for (i = 0; i < lat.length; i++) lat[i] = lo + rnd() * (hi - lo);
+  for (y = 0; y <= ny; y++) lat[y * (nx + 1) + nx] = lat[y * (nx + 1)]; for (x = 0; x <= nx; x++) lat[ny * (nx + 1) + x] = lat[x];   /* the lattice closes on itself: the noise tiles */
   var wx = new Float32Array(px), wy = new Float32Array(py); for (i = 0; i < px; i++) { x = (i + 0.5) / px; wx[i] = x * x * (3 - 2 * x); } for (i = 0; i < py; i++) { y = (i + 0.5) / py; wy[i] = y * y * (3 - 2 * y); }
   for (var cy = 0; cy < ny; cy++) for (var cx = 0; cx < nx; cx++) {
     var a = lat[cy * (nx + 1) + cx], b = lat[cy * (nx + 1) + cx + 1], c2 = lat[(cy + 1) * (nx + 1) + cx], d2 = lat[(cy + 1) * (nx + 1) + cx + 1];
@@ -4402,7 +4418,9 @@ function smoothNoise(nx, ny, rnd, lo, hi, maxW, maxH) {
 }
 function clouds(g, w, h, rnd, cellsX, cellsY, alpha, lo, hi, op) {
   var nx = Math.max(2, Math.round(cellsX)), ny = Math.max(2, Math.round(cellsY)), n = smoothNoise(nx, ny, rnd, lo, hi, w, h);
-  g.save(); g.globalAlpha = alpha; g.globalCompositeOperation = op || 'overlay'; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'low'; g.drawImage(n, 0, 0, w, h); g.restore(); // the noise is smooth already, plain bilinear enlargement is enough
+  g.save(); g.globalAlpha = alpha; g.globalCompositeOperation = op || 'overlay'; g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; var R = n.width, Ry = n.height;
+  if (R < w || Ry < h) { var src = mkCanvas(R + 2, Ry + 2), pg = src.getContext('2d'), dx, dy; for (dx = -1; dx <= 1; dx++) for (dy = -1; dy <= 1; dy++) pg.drawImage(n, 1 + dx * R, 1 + dy * Ry); g.drawImage(src, -w / R, -h / Ry, w * (R + 2) / R, h * (Ry + 2) / Ry); }
+  else g.drawImage(n, 0, 0, w, h); g.restore();
 }
 function canvasTex(c, o) {
   o = o || {}; var t = new THREE.CanvasTexture(c);
@@ -4649,6 +4667,8 @@ function makeRenderer(canvas, bg) {
   r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
   if (window.FAST3D) { r.setPixelRatio(0.2); r.shadowMap.enabled = false; } // automated checks of the sequence logic on machines without a GPU
   r.userData = { bg: bg, backdrop: bg, redraw: null, onTheme: null }; GLBudget.reg(r, canvas); if (window.XYFX) XYFX.attach(r);
+  (function () { var hostEl = canvas.parentNode, rr = r.render; if (!hostEl || !hostEl.classList || window.FAST3D) return; try { if (getComputedStyle(hostEl).position === 'static') hostEl.style.position = 'relative'; } catch (e) {} hostEl.classList.add('is-3dwait'); hostEl.setAttribute('data-wait', typeof LANG !== 'undefined' && LANG === 'zh' ? '3D 模型載入中…' : 'Loading the 3D model…');
+    r.render = function (s, c) { rr.call(r, s, c); if (hostEl && s && s.isScene && c && c.isCamera && !r.getRenderTarget()) { hostEl.classList.remove('is-3dwait'); hostEl = null; r.render = rr; } }; })();
   THEME3D.reg(function (dark) { var c = dark ? THEME3D.behind(canvas) : bg; r.userData.backdrop = c; r.setClearColor(screenColor(c), 1); if (r.userData.onTheme) r.userData.onTheme(dark, c); });
   THEME3D.then(function () { if (r.userData.redraw) r.userData.redraw(); });
   return r;
@@ -4661,7 +4681,7 @@ function Governor(renderer, scene) {
   function apply() {
     while (applied < QUALITY.level) {
       applied++;
-      if (applied === 1) renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1));
+      if (applied === 1) { var gp = Math.max(1, Math.min(window.devicePixelRatio || 1, 2) * 0.75); renderer.userData.pxGov = gp; if (!renderer.userData.hqOn) renderer.setPixelRatio(gp); }
       if (applied === 2) { renderer.shadowMap.enabled = false; scene.traverse(function (o) { if (o.material) [].concat(o.material).forEach(function (m) { m.needsUpdate = true; }); }); }
     }
   }
@@ -4673,6 +4693,19 @@ function Governor(renderer, scene) {
     var avg = acc / n; n = 0; acc = 0;
     if (avg > 42) { QUALITY.level += (QUALITY.level === 0 && renderer.getPixelRatio() <= 1) ? 2 : 1; skip = 10; apply(); }
   };
+}
+/* A view that has come to rest is drawn once more at the display's own resolution (up to 3×, at most 5.2 megapixels) and at the full tier of the
+   picture pipeline; the next moving frame returns to the working resolution. moved(now) after a moving frame, rest(now) on a frame without one, leave() before one. */
+function StillHQ(renderer, drawStill) {
+  var on = false, at = 0, px = 0;
+  this.moved = function (now) { at = now || performance.now(); };
+  this.on = function () { return on; };
+  this.leave = function () { if (!on) return; on = false; renderer.userData.hqOn = false; if (window.XYFX && XYFX.still) XYFX.still(renderer, false); renderer.setPixelRatio(renderer.userData.pxGov || px); };
+  this.rest = function (now) { if (on || !at || now - at < 320 || window.FAST3D || window.XY_NOHQ) return; at = 0;
+    var cur = renderer.getPixelRatio(), want = Math.min(window.devicePixelRatio || 1, 3), c = renderer.domElement, css = (c.width / cur) * (c.height / cur); if (!(css > 16)) return; if (css * want * want > 5.2e6) want = Math.sqrt(5.2e6 / css);
+    var fx = renderer.__xyfx, up = !!(fx && fx.ok && window.XYFX && XYFX.tier > 0 && (fx.lvl < Math.min(XYFX.tier, 3) || fx.scale < 1));
+    if (want < cur + 0.05 && !up) return; px = cur; on = true; renderer.userData.hqOn = true; if (want > cur + 0.05) renderer.setPixelRatio(want); if (window.XYFX && XYFX.still) XYFX.still(renderer, true);
+    try { drawStill(); } catch (e) {} };
 }
 // a neutral studio for the reflections on steel and on the wet surface: bright ceiling, grey walls, two soft boxes
 function makeEnv(renderer) {
@@ -7889,11 +7922,13 @@ function CRView(host, o) {
     var goal = xray && !microOn ? 1 : 0; if (Math.abs(goal - xr) > 0.004) { xr += (goal - xr) * 0.16; dirty = true; } else if (xr !== goal) { xr = goal; dirty = true; }
     if (camTw) { camTw.s = Math.min(1, camTw.s + dt / 0.9); var e = camTw.s * camTw.s * (3 - 2 * camTw.s), A = camTw.a, B = camTw.b; v.az = A.az + (B.az - A.az) * e; v.el = A.el + (B.el - A.el) * e; v.dist = A.dist + (B.dist - A.dist) * e; target.set(A.t.x + (B.t[0] - A.t.x) * e, A.t.y + (B.t[1] - A.t.y) * e, A.t.z + (B.t[2] - A.t.z) * e); dirty = true; if (camTw.s >= 1) camTw = null; }
     if (sway && sway.on) dirty = true;
-    if (dirty && fitRenderer(renderer, cam, host)) { var t0 = performance.now(); state(); if (self.afterState) self.afterState(); place(now); xySite(); renderer.render(scene, cam); dirty = false; gov.tick(performance.now() - t0 + 8); if (self.onRender) self.onRender(); }
+    if (dirty) hq.leave();
+    if (dirty && fitRenderer(renderer, cam, host)) { var t0 = performance.now(); state(); if (self.afterState) self.afterState(); place(now); xySite(); renderer.render(scene, cam); dirty = false; gov.tick(performance.now() - t0 + 8); if (self.onRender) self.onRender(); hq.moved(now); }
+    else if (!dirty && !self.fps) hq.rest(now);   /* at rest: once more, at the display's own resolution */
   }
   function frame(now) { if (!visible) { running = false; return; } requestAnimationFrame(frame); try { step(now); } catch (e) {} }
   function still() { try { if (fitRenderer(renderer, cam, host)) { state(); if (self.afterState) self.afterState(); place(); xySite(); renderer.render(scene, cam); if (self.onRender) self.onRender(); } } catch (e) {} }
-  this.still = still; renderer.userData.redraw = function () { dirty = true; if (!visible) still(); };
+  var hq = new StillHQ(renderer, still); this.still = still; renderer.userData.redraw = function () { dirty = true; if (!visible) still(); };
   requestAnimationFrame(still);
   new IntersectionObserver(function (en) { var was = visible; visible = en[0].isIntersecting; if (visible && !was) { dirty = true; if (sway) { sway.on = true; sway.t0 = 0; } } if (visible && !running) { running = true; requestAnimationFrame(frame); } }, { threshold: 0.1 }).observe(host);
   window.addEventListener('resize', function () { dirty = true; });
@@ -8217,7 +8252,7 @@ var RC_ICON = { // 56 × 40 line pictograms (ink lines, .w water, .d2 filled gre
     'rc.sub0': ['Substrate', 'concrete: sound, clean, open capillary system, profile CSP-3; saturated with clean water, no water standing on the surface (SSD)'],
     'rc.stage.of': 'Stage {i} of {n}', 'rc.prev': 'Previous stage', 'rc.next': 'Next stage', 'rc.play': 'Play the build-up', 'rc.pause': 'Pause', 'rc.show': 'Show in the cross-section',
     'rc.bar': 'Application', 'rc.bar.all': 'All applications', 'rc.m3d.xray': 'X-ray', 'rc.m3d.reset': 'Reset view', 'rc.m3d.zin': 'Zoom in', 'rc.m3d.zout': 'Zoom out', 'rc.tl.prev': 'Previous steps', 'rc.tl.next': 'Next steps',
-    'rc.m3d.hint': 'Drag to rotate · right-drag, Shift + drag or two fingers to move · scroll (after a click) or pinch to zoom', 'rc.m3d.aria': '3D model of the room being waterproofed with the Xypex system, stage by stage', 'rc.sec.aria': '3D section through the wall and the floor with the layers of the stage', 'rc.sec.hint': 'Drag to rotate · scroll to zoom', 'rc.hero.hint': 'Drag to rotate', 'rc.hero.aria': '3D sample panel of the Xypex crystalline coating system in six steps',
+    'rc.m3d.hint': 'Drag to rotate · right-drag, Shift + drag or two fingers to move · scroll (after a click) or pinch to zoom', 'rc.m3d.aria': '3D model of the room being waterproofed with the Xypex system, stage by stage', 'rc.sec.aria': '3D section through the wall and the floor with the layers of the stage', 'rc.sec.hint': 'Drag to rotate · scroll or pinch to zoom', 'rc.hero.hint': 'Drag to rotate', 'rc.hero.aria': '3D sample panel of the Xypex crystalline coating system in six steps',
     'rc.m3d.microNote': 'Micro scale: schematic, the pores enlarged against the coating.', 'rc.m3d.microBuild': 'Building the micro scale …',
     'rc.m3d.microSub': { rctank: 'Micro scale shows the surface itself: the pores and a fine crack of the concrete skin, the two coats on it, and the crystals growing from the coating into the pores and the crack until the water of the filled tank can no longer enter.', rcwall: 'Micro scale shows the prepared concrete skin, the water pressing into the pores and the crack from behind, the two coats — and the crystals that grow into the capillaries against the flow and hold the water back.', rcpit: 'Micro scale shows the pit wall from inside: water pressing through pores and crack from the ground, the two coats, and the crystals closing the paths behind them.', rcsew: 'Micro scale shows the skin of the wastewater structure: the two coats and the crystals in the pores, which stay in place when the surface is attacked.' },
     'rc.m3d.co': { rctank: [['Sealing strip at the joint', 'The wall–floor joint is cut to a 25 × 37 mm slot, primed with {CONC} slurry and packed flush with {DP}. The coats run over it.'], ['Two coats, one day apart at most', '{CONC} first, {MOD} or {CONC} second, each 0.65–0.8 kg/m², the second while the first is green.'], ['Fifteen days to water', 'Three days of fog curing, twelve more before the tank is filled. Approved for drinking water (NSF/ANSI 61).']], rcwall: [['The water is stopped first', '{PNP} in the lower half of the slot stops the flow; {DP} fills the rest. Nothing is coated over running water.'], ['From inside, against the pressure', 'The crystals grow into the wall towards the water. The seal is in the concrete, so the pressure cannot push it off.'], ['Damp patches fade', 'Crystal growth takes days to weeks. Areas that stay damp at first usually shrink as the pores close.']], rcpit: [['Pressure relieved, then plugged', 'A bleeder hose takes the flow while the slot is plugged around it; the hose is pulled and its hole plugged last.'], ['Every joint gets its strip', 'Wall–floor joint and construction joints: slot, slurry, {DP}, slurry — before the two coats.'], ['Air that moves', 'In a closed pit the coating is kept moist and the air is kept moving; {GAMMA} where fog spraying is not practical.']], rcsew: [['Rebuild, then coat', 'Deteriorated concrete is removed and rebuilt with {MEGA2}, 10–50 mm per layer. For sewer rehabilitation Xypex supplies {MEGA2B}.'], ['Chemistry within pH 3–11', 'In constant contact the treated concrete resists pH 3 to 11; in 5 % sulphuric acid erosion was one eighth of the reference.'], ['Eighteen days to service', 'Three days of curing and eighteen days of setting before wastewater is let in.']] },
@@ -8287,7 +8322,7 @@ var RC_ICON = { // 56 × 40 line pictograms (ink lines, .w water, .d2 filled gre
     'rc.sub0': ['底材', '混凝土：堅實、潔淨、毛細孔開放，表面粗糙度 CSP-3；以清水充分潤濕至飽和，表面無明水（面乾內飽和 SSD）'],
     'rc.stage.of': '第 {i} 階段，共 {n} 階段', 'rc.prev': '上一階段', 'rc.next': '下一階段', 'rc.play': '播放系統構成', 'rc.pause': '暫停', 'rc.show': '在剖面中顯示',
     'rc.bar': '應用情境', 'rc.bar.all': '所有應用情境', 'rc.m3d.xray': 'X 光', 'rc.m3d.reset': '重設視角', 'rc.m3d.zin': '放大', 'rc.m3d.zout': '縮小', 'rc.tl.prev': '前幾個步驟', 'rc.tl.next': '後幾個步驟',
-    'rc.m3d.hint': '拖曳旋轉 · 右鍵、Shift＋拖曳或雙指平移 · 點一下畫面後滾輪或雙指縮放', 'rc.m3d.aria': '以 Xypex 系統施作防水的空間 3D 模型，逐階段呈現', 'rc.sec.aria': '牆體與地坪的 3D 剖面，顯示該階段的各層', 'rc.sec.hint': '拖曳旋轉 · 滾輪縮放', 'rc.hero.hint': '拖曳旋轉', 'rc.hero.aria': 'Xypex 結晶型塗層系統的 3D 樣板，共六個步驟',
+    'rc.m3d.hint': '拖曳旋轉 · 右鍵、Shift＋拖曳或雙指平移 · 點一下畫面後滾輪或雙指縮放', 'rc.m3d.aria': '以 Xypex 系統施作防水的空間 3D 模型，逐階段呈現', 'rc.sec.aria': '牆體與地坪的 3D 剖面，顯示該階段的各層', 'rc.sec.hint': '拖曳旋轉 · 滾輪或雙指縮放', 'rc.hero.hint': '拖曳旋轉', 'rc.hero.aria': 'Xypex 結晶型塗層系統的 3D 樣板，共六個步驟',
     'rc.m3d.microNote': '微觀尺度：示意圖，孔隙相對於塗層已放大。', 'rc.m3d.microBuild': '正在建立微觀模型…',
     'rc.m3d.microSub': { rctank: '微觀尺度呈現表面本身：混凝土表層的孔隙與一道細裂縫、其上的兩道塗層，以及由塗層長入孔隙與裂縫的結晶——直到注水後池內的水再也無法進入。', rcwall: '微觀尺度呈現處理後的混凝土表層、自背後壓入孔隙與裂縫的水、兩道塗層——以及逆著水流長入毛細孔、把水擋回去的結晶。', rcpit: '微觀尺度由內側呈現機坑牆面：自土層穿過孔隙與裂縫壓入的水、兩道塗層，以及在其後方把通道封閉的結晶。', rcsew: '微觀尺度呈現污水結構物的表層：兩道塗層與孔隙中的結晶——即使表面受到侵蝕，結晶仍留在原處。' },
     'rc.m3d.co': { rctank: [['接縫處的封縫帶', '牆與底版的接縫開成 25 × 37 mm 的槽，塗 {CONC} 漿料後以 {DP} 填實至齊平，塗層再覆蓋其上。'], ['兩道塗層，間隔不超過一天', '先 {CONC}，再 {MOD} 或 {CONC}，每道 0.65–0.8 kg/m²，第二道於第一道仍呈「生」狀態時施作。'], ['十五天後注水', '細水霧養護三天，再等十二天才注水。通過飲用水接觸核可（NSF/ANSI 61）。']], rcwall: [['先止水', '槽的下半部以 {PNP} 止住水流，其餘以 {DP} 填滿。絕不在流動的水上塗佈。'], ['由室內側施作，逆壓止水', '結晶朝著水的方向長入牆體。止水作用在混凝土內部，水壓無法把它頂開。'], ['潮濕痕跡會逐漸消退', '結晶生長需要數天至數週。起初仍潮濕的區域，通常會隨著孔隙封閉而縮小。']], rcpit: [['先洩壓，再封堵', '以導水管引流，同時沿管周圍把槽封堵；最後拔除導水管，封堵其孔洞。'], ['每道接縫都有封縫帶', '牆與底版接縫及施工縫：開槽、漿料、{DP}、漿料——之後才施作兩道塗層。'], ['讓空氣流動', '封閉的機坑內須保持塗層濕潤並維持空氣流通；無法噴霧養護時改用 {GAMMA}。']], rcsew: [['先重建，再塗佈', '劣化的混凝土先行鑿除，以 {MEGA2} 重建，每層 10–50 mm。污水管渠修復另有 {MEGA2B} 可供選用。'], ['耐化學範圍 pH 3–11', '經處理的混凝土可持續接觸 pH 3 至 11；於 5 % 硫酸中的侵蝕量為對照組的八分之一。'], ['十八天後啟用', '養護三天，再靜置十八天，才讓污水進入。']] },
@@ -8621,7 +8656,7 @@ var CA_MICRO_MARKS = [0, 0.12, 0.24, 0.36, 0.52, 0.62, 0.80, 0.92];
     'ca.hero.ref': 'Untreated concrete', 'ca.hero.bet': 'With Xypex Admix', 'ca.hero.toggle': 'Compare',
     'ca.hero.zones': [['Water under pressure', 'ground water on the outside of the wall'], ['Capillary zone', 'the depth to which water is drawn into the pores and conducted'], ['Core', 'dry; water arrives only as vapour'], ['Diffusion zone', 'moisture leaves the inside face as vapour']],
     'ca.hero.note': { ref: 'Untreated concrete: the capillary zone reaches the reinforcement; a crack near the surface carries water and dissolved salts to the steel, a through crack brings water into the building.', bet: 'With Xypex Admix: the crystalline structure blocks the capillaries and seals the cracks — the wet zone stays at the water face, the reinforcement lies in dry concrete, and the wall still breathes: moisture leaves the room side as vapour.' },
-    'ca.hero.hint': 'Drag to rotate · switch the concrete below', 'ca.sec.aria': 'Section through the element under construction, 3D', 'ca.sec.hint': 'Section through the element · drag to rotate · Ctrl + wheel to zoom',
+    'ca.hero.hint': 'Drag to rotate · switch the concrete below', 'ca.sec.aria': 'Section through the element under construction, 3D', 'ca.sec.hint': 'Section through the element · drag to rotate · scroll or pinch to zoom',
     'ca.hero.lb': { water: 'Water under pressure', cap: 'Capillary zone', core: 'Core', diff: 'Diffusion zone', steel: 'Reinforcing steel', 'in': 'Inside', out: 'Outside', crack: 'Crack, carrying water', healed: 'Crack, sealed by crystals', vap: 'Moisture leaves as vapour', shift: 'Capillary zone reduced' },
     'ca.docs.sys': 'Xypex Admix C-Series and Bio-San C500', 'ca.docs.kicker': 'Xypex Admixtures / Additives · System guide',
     'ca.docs.standards': ['ACI 212.3R-16 — Chemical admixtures for concrete: permeability-reducing admixtures for hydrostatic conditions (PRAH)', 'ASTM C494 / EN 934-2 + A1 — Chemical admixtures for concrete', 'U.S. Army Corps of Engineers CRD C48 — Permeability of concrete (modified: 1.05 MPa, no leakage)', 'EN 12390-8 — Depth of penetration of water under pressure', 'ACI 309R (consolidation), ACI 308 (curing), ACI 305R / ACI 306R (hot and cold weather concreting)', 'NSF/ANSI 61 — Drinking water system components; Xypex additive schematics and guide specification of the C-Series'],
@@ -8671,7 +8706,7 @@ var CA_MICRO_MARKS = [0, 0.12, 0.24, 0.36, 0.52, 0.62, 0.80, 0.92];
       cawall: [['Chlorides stay outside', 'A retaining wall, abutment or marine wall carries chlorides, spray and frost on its face. The crystalline structure lowers chloride diffusion by up to 75 % (NT BUILD 443) and gave 94 % relative durability after 300 freeze–thaw cycles (ASTM C666).'], ['Nineteen years in the sea', 'Lascelles Wharf in Australia was cast with 1 % Xypex Admix in 1995. Cores taken after 19 years of marine exposure predict 164 years to corrosion initiation — against a design life of 50.'], ['Where the limits are', 'Cracks that move under variable load — a parking deck, a bridge deck — can exceed what crystals can seal: such joints and cracks get a flexible detail, and Xypex Technical Services are consulted.']]
     },
     'ca.m3d.xray': 'X-ray view', 'ca.m3d.reset': 'Reset view', 'ca.m3d.zin': 'Zoom in', 'ca.m3d.zout': 'Zoom out', 'ca.tl.prev': 'Previous steps', 'ca.tl.next': 'Next steps',
-    'ca.m3d.hint': 'Drag to rotate · Shift + drag to move · Ctrl + wheel to zoom', 'ca.m3d.aria': 'Interactive 3D model of the construction of a watertight element with the Xypex crystalline admixture',
+    'ca.m3d.hint': 'Drag to rotate · right-drag, Shift + drag or two fingers to move · scroll (after a click) or pinch to zoom', 'ca.m3d.aria': 'Interactive 3D model of the construction of a watertight element with the Xypex crystalline admixture',
     'ca.stage.of': 'Stage {i} of {n}', 'ca.prev': 'Previous stage', 'ca.next': 'Next stage', 'ca.play': 'Play the construction', 'ca.pause': 'Pause', 'ca.show': 'Show in the cross-section', 'ca.bar': 'Application', 'ca.bar.all': 'All applications',
     'ca.prod.label': 'Products', 'ca.prod.title': 'The C-Series and Bio-San C500', 'ca.prod.sub': 'Technical data from the current Xypex data sheets. Select a product; for the C-Series choose the regular or the NF grade.',
     'ca.prod.form': 'Form', 'ca.prod.pack': 'Packaging', 'ca.prod.colour': 'Colour', 'ca.prod.shelf': 'Shelf life', 'ca.prod.areas': 'Areas of application', 'ca.prod.adv': 'Advantages', 'ca.prod.feat': 'Product features', 'ca.prod.data': 'Technical data', 'ca.prod.dl': 'Downloads', 'ca.prod.dlsys': 'System documents', 'ca.prod.dlweb': 'On xypex.com',
@@ -8762,7 +8797,7 @@ var CA_MICRO_MARKS = [0, 0.12, 0.24, 0.36, 0.52, 0.62, 0.80, 0.92];
     'ca.hero.ref': '未處理混凝土', 'ca.hero.bet': '摻 Xypex Admix', 'ca.hero.toggle': '比較',
     'ca.hero.zones': [['壓力水', '牆外側之地下水'], ['毛細區', '水被吸入孔隙並傳導之深度'], ['核心區', '乾燥；水僅以水氣形式到達'], ['擴散區', '水分以水氣自內側表面散出']],
     'ca.hero.note': { ref: '未處理混凝土：毛細區深及鋼筋；近表面裂縫把水與溶解鹽類帶到鋼筋，貫穿裂縫把水帶進室內。', bet: '摻 Xypex Admix：結晶構造阻斷毛細管並封閉裂縫——潮濕區停留在迎水面，鋼筋位於乾燥混凝土中，牆體仍可透氣：水分以水氣自室內側散出。' },
-    'ca.hero.hint': '拖曳旋轉 · 於下方切換混凝土', 'ca.sec.aria': '施工中構件之 3D 剖面', 'ca.sec.hint': '構件剖面 · 拖曳旋轉 · Ctrl + 滾輪縮放',
+    'ca.hero.hint': '拖曳旋轉 · 於下方切換混凝土', 'ca.sec.aria': '施工中構件之 3D 剖面', 'ca.sec.hint': '構件剖面 · 拖曳旋轉 · 滾輪或雙指縮放',
     'ca.hero.lb': { water: '壓力水', cap: '毛細區', core: '核心區', diff: '擴散區', steel: '鋼筋', 'in': '室內', out: '室外', crack: '裂縫，帶水', healed: '裂縫，已由結晶封閉', vap: '水分以水氣散出', shift: '毛細區縮小' },
     'ca.docs.sys': 'Xypex Admix C-Series 與 Bio-San C500', 'ca.docs.kicker': 'Xypex 摻料／添加劑 · 系統指南',
     'ca.docs.standards': ['ACI 212.3R-16——混凝土化學摻料：適用靜水壓條件之降低滲透性摻料（PRAH）', 'ASTM C494／EN 934-2 + A1——混凝土化學摻料', '美國陸軍工兵團 CRD C48——混凝土透水性（修正法：1.05 MPa，無滲漏）', 'EN 12390-8——壓力水滲透深度', 'ACI 309R（搗實）、ACI 308（養護）、ACI 305R／ACI 306R（熱天與冷天施工）', 'NSF/ANSI 61——飲用水系統組件；Xypex 摻料標準圖與 C-Series 規範範本'],
@@ -8812,7 +8847,7 @@ var CA_MICRO_MARKS = [0, 0.12, 0.24, 0.36, 0.52, 0.62, 0.80, 0.92];
       cawall: [['把氯離子擋在外面', '擋土牆、橋台或海事牆面承受氯鹽、飛沫與凍融。結晶構造使氯離子擴散最多降低 75 %（NT BUILD 443），300 次凍融循環後相對耐久性 94 %（ASTM C666）。'], ['海中十九年', '澳洲 Lascelles 碼頭於 1995 年以 1 % Xypex Admix 澆置。海洋暴露 19 年後取樣，預測 164 年方開始腐蝕——設計年限為 50 年。'], ['限制所在', '承受變動載重而活動的裂縫——如停車場樓版、橋面版——可能超出結晶所能封閉的範圍：此類接縫與裂縫須採柔性細部，並洽 Xypex 技術服務。']]
     },
     'ca.m3d.xray': '透視模式', 'ca.m3d.reset': '重設視角', 'ca.m3d.zin': '放大', 'ca.m3d.zout': '縮小', 'ca.tl.prev': '前幾步', 'ca.tl.next': '後幾步',
-    'ca.m3d.hint': '拖曳旋轉 · Shift + 拖曳平移 · Ctrl + 滾輪縮放', 'ca.m3d.aria': '以 Xypex 結晶摻料施作水密構件之互動式 3D 模型',
+    'ca.m3d.hint': '拖曳旋轉 · 右鍵、Shift＋拖曳或雙指平移 · 點一下畫面後滾輪或雙指縮放', 'ca.m3d.aria': '以 Xypex 結晶摻料施作水密構件之互動式 3D 模型',
     'ca.stage.of': '第 {i} 階段，共 {n} 階段', 'ca.prev': '上一階段', 'ca.next': '下一階段', 'ca.play': '播放施工過程', 'ca.pause': '暫停', 'ca.show': '於剖面中顯示', 'ca.bar': '應用情境', 'ca.bar.all': '所有應用情境',
     'ca.prod.label': '產品', 'ca.prod.title': 'C-Series 與 Bio-San C500', 'ca.prod.sub': '技術資料取自 Xypex 現行資料表。請選擇產品；C-Series 可選擇標準級或 NF 級。',
     'ca.prod.form': '型態', 'ca.prod.pack': '包裝', 'ca.prod.colour': '顏色', 'ca.prod.shelf': '保存期限', 'ca.prod.areas': '適用範圍', 'ca.prod.adv': '優勢', 'ca.prod.feat': '產品特性', 'ca.prod.data': '技術資料', 'ca.prod.dl': '下載', 'ca.prod.dlsys': '系統文件', 'ca.prod.dlweb': 'xypex.com 相關頁面',
@@ -11486,12 +11521,10 @@ var RC3D = (function () {
 
   /* ---------- Xypex on site: the pails on the crown of the wall, the pump sprayer of the curing agent, the gloved hand, hammer and wood block ---------- */
   var PAIL = { CONC: ['#12397f', 'CONCENTRATE'], MOD: ['#00857c', 'MODIFIED'], PNP: ['#fc610b', "PATCH'N PLUG"] };
-  /* a 22.7 kg pail: white, with the product's printed label, a snap-on lid and a wire bail */
-  function pail(ctx, kind) { var g = new THREE.Group(), L = PAIL[kind], white = ctx.mat({ color: 0xf2f2ee, roughness: 0.55, envMapIntensity: 0.5 }), lt = ctx.keep(canvasTex(XY_PACK.label(kind, function () { if (lt) lt.needsUpdate = true; }), { aniso: 8 })), lab = ctx.mat({ map: lt, roughness: 0.6, envMapIntensity: 0.4 }), steel = ctx.mat({ color: 0x9aa0a4, roughness: 0.4, metalness: 0.7 });
-    function put(geo, m, y, cast) { var me = new THREE.Mesh(ctx.keep(geo), m); me.position.y = y; me.castShadow = cast !== false; me.receiveShadow = true; g.add(me); return me; }
-    put(new THREE.CylinderGeometry(0.062, 0.054, 0.15, 32), white, 0.075); [0, Math.PI].forEach(function (a0) { put(new THREE.CylinderGeometry(0.0611, 0.0564, 0.087, 16, 1, true, a0 - 0.91, 1.82), lab, 0.078, false); }); /* the manufacturer's printed label (parts/core/packart.js), front and back */ put(new THREE.CylinderGeometry(0.0645, 0.0645, 0.011, 32), white, 0.1555);
-    var rim = put(new THREE.TorusGeometry(0.063, 0.0035, 8, 32), white, 0.146, false); rim.rotation.x = Math.PI / 2; var bail = put(new THREE.TorusGeometry(0.066, 0.0018, 6, 28, Math.PI), steel, 0.134, false); bail.rotation.set(0.28, 0, Math.PI);
-    g.userData.mats = [white, lab, steel]; ctx.g.add(g); return g; }
+  /* a 22.7 kg pail: white, with the product's printed label, a snap-on lid and a wire bail — the same moulding as on the jobsite */
+  function pail(ctx, kind) { var white = ctx.mat({ color: 0xf2f1ec, roughness: 0.42, envMapIntensity: 0.7 }), lt = ctx.keep(canvasTex(XY_PACK.label(kind, function () { if (lt) lt.needsUpdate = true; }), { aniso: 8 })), lab = ctx.mat({ map: lt, roughness: 0.5, envMapIntensity: 0.6, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }), steel = ctx.mat({ color: 0x9aa0a5, roughness: 0.35, metalness: 0.8, envMapIntensity: 0.8 }), dark = ctx.mat({ color: 0x232426, roughness: 0.6 });
+    var g = XY_PAIL.build(THREE, { s: 0.375, white: white, steel: steel, dark: dark, label: lab, keep: ctx.keep });   /* the site's own pail (core/xycore.js XY_PAIL), at the sample's scale */
+    g.userData.mats = [white, lab, steel, dark]; ctx.g.add(g); return g; }
   /* the pump sprayer for Gamma Cure (diluted 1 : 3): tank, pump handle, hose and wand */
   function sprayer(ctx) { var g = new THREE.Group(), tank = ctx.mat({ color: 0xf2f2ee, roughness: 0.5, envMapIntensity: 0.5 }), blue = ctx.mat({ color: 0x0075c9, roughness: 0.5, envMapIntensity: 0.5 }), dark = ctx.mat({ color: 0x2a2e31, roughness: 0.6 });
     function put(geo, m, x, y, z) { var me = new THREE.Mesh(ctx.keep(geo), m); me.position.set(x, y, z); me.castShadow = true; g.add(me); return me; }
@@ -12204,7 +12237,7 @@ var RC_MICRO_MARKS = [0, 0.12, 0.22, 0.36, 0.52, 0.64, 0.80, 0.92];
     'nav.rc.tech': 'Technology', 'nav.rc.lcc': 'Life-cycle cost',
     'rc.tech.label': 'Technology', 'rc.tech.title': 'Crystallization: the concrete seals itself',
     'rc.tech.sub': 'What happens inside the concrete after {CONC} has been brushed on: where the chemicals travel, what they react with, why the seal is permanent — and what that means over the life of the structure. Schematic, at the scale of the capillary pores; not to scale.',
-    'rc.tech.player': 'Micro scale · the reaction, step by step', 'rc.tech.aria': '3D animation of the Xypex crystalline reaction in the capillary pores of the concrete', 'rc.tech.hint': 'Drag to rotate · Shift + drag to pan',
+    'rc.tech.player': 'Micro scale · the reaction, step by step', 'rc.tech.aria': '3D animation of the Xypex crystalline reaction in the capillary pores of the concrete', 'rc.tech.hint': 'Drag to rotate · Shift + drag or two fingers to pan',
     'rc.tech.steps': [
       ['Concrete is porous', 'Hardened cement paste is threaded with capillary pores, the paths the mixing water left behind. Under pressure, water follows them through the section and comes out on the other side.'],
       ['The slurry on saturated concrete', '{CONC} is brushed onto the saturated, surface-dry concrete, and a second coat follows while the first is green. The coating is not the seal: it is the carrier that brings the active chemicals to the surface.'],
@@ -12253,7 +12286,7 @@ var RC_MICRO_MARKS = [0, 0.12, 0.22, 0.36, 0.52, 0.64, 0.80, 0.92];
     'nav.rc.tech': '技術原理', 'nav.rc.lcc': '生命週期成本',
     'rc.tech.label': '技術原理', 'rc.tech.title': '結晶作用：混凝土自我封閉',
     'rc.tech.sub': '{CONC} 刷塗之後，混凝土內部發生了什麼：化學成分往哪裡移動、與什麼反應、為何止水效果是永久的——以及這對結構物的使用年限意味著什麼。示意圖，以毛細孔的尺度呈現；未依比例。',
-    'rc.tech.player': '微觀尺度 · 逐步呈現反應過程', 'rc.tech.aria': 'Xypex 結晶反應在混凝土毛細孔中進行的 3D 動畫', 'rc.tech.hint': '拖曳旋轉 · Shift + 拖曳平移',
+    'rc.tech.player': '微觀尺度 · 逐步呈現反應過程', 'rc.tech.aria': 'Xypex 結晶反應在混凝土毛細孔中進行的 3D 動畫', 'rc.tech.hint': '拖曳旋轉 · Shift＋拖曳或雙指平移',
     'rc.tech.steps': [
       ['混凝土是多孔的', '硬化的水泥漿體中布滿毛細孔，是拌合水留下的通道。在壓力下，水沿著這些通道穿過斷面，從另一側滲出。'],
       ['漿料塗在飽和的混凝土上', '{CONC} 刷塗於面乾內飽和的混凝土，並於第一道仍呈「生」狀態時施作第二道。塗層本身不是止水層：它是把活性化學成分帶到表面的載體。'],
@@ -12641,11 +12674,79 @@ var CATX = (function () {
     var b = mkCanvas(S, S), qb = b.getContext('2d'); qb.fillStyle = '#707070'; qb.fillRect(0, 0, S, S); clouds(qb, S, S, lcg(7003), 24, 24, 0.5, 80, 176); var rb = lcg(7002); // the same stones, as relief
     pebbles(qb, S, rb, 420 * m * m, 2 * m, 7 * m, ['#b8b8b8', '#c4c4c4', '#aaaaaa', '#cfcfcf', '#b0b0b0']); pebbles(qb, S, rb, 40 * m * m, 7 * m, 14 * m, ['#d0d0d0', '#dcdcdc', '#c8c8c8']);
     return { map: c, bump: b }; });
-  /* strata: the cut face of a bank — horizontal layers of slightly different earth, pebble lines, a darker damp lower band */
-  var strata = once('strata', function () { var S = SMALL3D ? 512 : 1024, c = mkCanvas(S, S), q = c.getContext('2d'), r = lcg(7011), m = S / 1024, E = earth(); q.drawImage(E.map, 0, 0, S, S);
-    var y = 0; while (y < S) { var h = (40 + r() * 120) * m, tone = r(); q.fillStyle = tone < 0.4 ? 'rgba(60,46,32,.22)' : tone < 0.7 ? 'rgba(196,172,124,.18)' : 'rgba(120,96,70,.16)'; q.fillRect(0, y, S, h); q.fillStyle = 'rgba(40,30,20,.25)'; q.fillRect(0, y + h - 2, S, 2); if (r() < 0.5) { var py = y + h * 0.5, k; for (k = 0; k < 24 * m; k++) { var x = r() * S, rr = (2 + r() * 5) * m; q.fillStyle = ['#9a9385', '#b4a98f', '#7c766b'][Math.floor(r() * 3)]; q.beginPath(); q.ellipse(x, py + (r() - 0.5) * 8 * m, rr, rr * 0.7, 0, 0, 7); q.fill(); } } y += h; }
-    var g = q.createLinearGradient(0, 0, 0, S); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.6, 'rgba(20,30,40,.08)'); g.addColorStop(1, 'rgba(20,30,40,.3)'); q.fillStyle = g; q.fillRect(0, 0, S, S);
-    return { map: c, bump: E.bump }; });
+  /* strata: the face of the ground as the excavator leaves it — the profile from the surface down: fill and topsoil, brown silty clay, sandy silt with a
+     thin gravel lens, the river gravel (rounded cobbles in sand), grey silty clay, dense and damp at depth. The layers meet along wavy, ragged, soft
+     boundaries and carry no ruled lines (ruled courses read as masonry: Xypex is shown on reinforced concrete, and the ground must read as ground);
+     the teeth of the bucket leave vertical grooves in the cohesive layers. The picture closes on itself along the face (TW metres) and is NOT
+     repeated down it (TH metres from the ground level; earthAt registers every face to that level, so the layers run through from box to box). */
+  var STRATA = { TW: 2.4, TH: 4.8 };
+  var strata = once('strata', function () {
+    var W = SMALL3D ? 512 : 1024, H = W * 2, c = mkCanvas(W, H), q = c.getContext('2d'), b = mkCanvas(W, H), qb = b.getContext('2d'), r = lcg(7011), pm = H / STRATA.TH, i, j, x, y;
+    /* [depth of the layer's lower boundary in m, its colour, how well it keeps the marks of the bucket] */
+    var LY = [[0.26, [84, 68, 52], 0.45], [1.05, [146, 116, 84], 1], [1.7, [170, 146, 106], 0.8], [2.9, [140, 132, 116], 0.22], [3.95, [124, 116, 102], 1], [99, [100, 96, 88], 0.9]], NL = LY.length;
+    var B = LY.map(function (L, k) { var a = new Float32Array(W); for (x = 0; x < W; x++) { var u = x / W * 6.2832; a[x] = L[0] + (Math.sin(u + k * 1.7) * 0.05 + Math.sin(u * 2 + k * 2.9) * 0.03 + Math.sin(u * 5 + k * 0.6) * 0.012) * (k ? 1 : 0.4); } return a; });
+    /* value noise that closes on itself along the face (period `per` cells) and runs free down it */
+    var NX = 64, NY = 256, lat = new Float32Array(NX * NY); for (i = 0; i < lat.length; i++) lat[i] = r();
+    function vn(fx, fy, per) { var x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty); var xa = ((x0 % per) + per) % per, xb = (xa + 1) % per, ya = ((y0 % NY) + NY) % NY, yb = (ya + 1) % NY, a = lat[ya * NX + xa], b2 = lat[ya * NX + xb], c2 = lat[yb * NX + xa], d2 = lat[yb * NX + xb]; return (a + (b2 - a) * tx) * (1 - ty) + (c2 + (d2 - c2) * tx) * ty; }
+    var im = q.createImageData(W, H), d = im.data, ib = qb.createImageData(W, H), db = ib.data, o = 0;
+    for (y = 0; y < H; y++) { var z = y / pm;
+      for (x = 0; x < W; x++, o += 4) { var fx = x / W, zj = z + (vn(fx * 48, z * 21, 48) - 0.5) * 0.07 + (vn(fx * 16, z * 6 + 9, 16) - 0.5) * 0.05; j = 0; while (j < NL - 1 && zj > B[j][x]) j++;
+        var A = LY[j][1], R0 = A[0], G0 = A[1], B0 = A[2], gk = LY[j][2];
+        if (j > 0) { var e = (zj - B[j - 1][x]) / 0.045; if (e < 1) { var P0 = LY[j - 1][1], t = e * e * (3 - 2 * e); R0 = P0[0] + (R0 - P0[0]) * t; G0 = P0[1] + (G0 - P0[1]) * t; B0 = P0[2] + (B0 - P0[2]) * t; gk = LY[j - 1][2] + (gk - LY[j - 1][2]) * t; } }
+        var n1 = vn(fx * 8, z * 3.3, 8), n2 = vn(fx * 32, z * 13 + 3, 32), n3 = vn(fx * 64, z * 27 + 31, 64), n4 = vn(fx * 64, z * 90 + 77, 64);
+        /* the grooves of the bucket's teeth: about 85 mm apart, wandering a little, broken where the bucket was set again */
+        var wob = (vn(fx * 16, z * 1.4 + 7, 16) - 0.5) * 1.1, s = Math.sin(6.2832 * (fx * 28 + wob)), brk = vn(fx * 4, z * 1.6 + 40, 4), gs = gk * (0.55 + 0.45 * brk);
+        var f = (0.80 + 0.22 * n1 + 0.15 * (n2 - 0.5) + 0.13 * (n3 - 0.5) + 0.07 * (n4 - 0.5)) * (1 + 0.075 * s * gs);
+        var damp = (z - 3.0) / 1.6; damp = damp < 0 ? 0 : damp > 1 ? 1 : damp; f *= 1 - 0.24 * damp * damp * (3 - 2 * damp);
+        if (j === 0) f *= 0.92 + 0.16 * n3; /* the crumb of the topsoil */
+        d[o] = Math.min(255, R0 * f); d[o + 1] = Math.min(255, G0 * f); d[o + 2] = Math.min(255, B0 * f * (1 + 0.05 * damp)); d[o + 3] = 255;
+        var bv = 128 + 46 * s * gs + 44 * (n3 - 0.5) + 30 * (n4 - 0.5) + 26 * (n2 - 0.5); db[o] = db[o + 1] = db[o + 2] = bv < 0 ? 0 : bv > 255 ? 255 : bv; db[o + 3] = 255; } }
+    q.putImageData(im, 0, 0); qb.putImageData(ib, 0, 0);
+    function wrapX(cx, rad, fn) { fn(cx); if (cx < rad) fn(cx + W); if (cx > W - rad) fn(cx - W); }
+    function bAt(k, xx) { return B[k][((Math.round(xx) % W) + W) % W]; }
+    /* a rounded stone lying in the face: a soft seat under it, a body lit from above left, no outline */
+    var TONES = [[156, 151, 138], [179, 171, 152], [133, 127, 116], [165, 154, 130], [143, 138, 128], [112, 108, 100], [172, 160, 140]];
+    function stone(cx, cy, rr, wet) { var ry = rr * (0.5 + r() * 0.3), an = (r() - 0.5) * 0.5, T = TONES[Math.floor(r() * TONES.length)], k = (0.86 + r() * 0.22) * (wet ? 0.82 : 1);
+      wrapX(cx, rr + 4, function (X) {
+        q.save(); q.translate(X, cy); q.rotate(an);
+        q.fillStyle = 'rgba(30,24,18,0.34)'; q.beginPath(); q.ellipse(rr * 0.05, ry * 0.2, rr * 1.07, ry * 1.1, 0, 0, 7); q.fill();
+        var g = q.createRadialGradient(-rr * 0.35, -ry * 0.45, rr * 0.05, 0, 0, rr * 1.05); g.addColorStop(0, 'rgb(' + Math.round(Math.min(255, T[0] * k * 1.08)) + ',' + Math.round(Math.min(255, T[1] * k * 1.08)) + ',' + Math.round(Math.min(255, T[2] * k * 1.08)) + ')'); g.addColorStop(0.6, 'rgb(' + Math.round(T[0] * k) + ',' + Math.round(T[1] * k) + ',' + Math.round(T[2] * k) + ')'); g.addColorStop(1, 'rgb(' + Math.round(T[0] * k * 0.8) + ',' + Math.round(T[1] * k * 0.8) + ',' + Math.round(T[2] * k * 0.8) + ')');
+        q.fillStyle = g; q.beginPath(); q.ellipse(0, 0, rr, ry, 0, 0, 7); q.fill();
+        if (rr > 5) { var gm = q.createLinearGradient(0, ry * 0.25, 0, ry * 1.05); gm.addColorStop(0, 'rgba(136,128,112,0)'); gm.addColorStop(1, 'rgba(136,128,112,0.5)'); q.fillStyle = gm; q.beginPath(); q.ellipse(0, 0, rr, ry, 0, 0, 7); q.fill(); }   /* the sand it lies in comes up its lower half */
+        q.restore();
+        qb.save(); qb.translate(X, cy); qb.rotate(an); var gb = qb.createRadialGradient(-rr * 0.2, -ry * 0.25, rr * 0.05, 0, 0, rr); gb.addColorStop(0, 'rgb(236,236,236)'); gb.addColorStop(0.75, 'rgb(190,190,190)'); gb.addColorStop(1, 'rgb(120,120,120)'); qb.fillStyle = gb; qb.beginPath(); qb.ellipse(0, 0, rr, ry, 0, 0, 7); qb.fill(); qb.restore(); }); }
+    /* the river gravel: cobbles of 4–18 cm packed in sand, the large ones first */
+    var m = W / 1024, list = [], n = Math.round(620 * (SMALL3D ? 0.8 : 1));
+    for (i = 0; i < n; i++) { var sz = r(), rr2 = (sz < 0.72 ? 0.014 + r() * 0.022 : sz < 0.95 ? 0.034 + r() * 0.03 : 0.062 + r() * 0.035) * pm; list.push([r() * W, r(), rr2]); }
+    var put = [];   /* the larger ones keep clear of one another (they are stones, not bubbles): a place is tried three times */
+    list.sort(function (a, b2) { return b2[2] - a[2]; }).forEach(function (p) { var tr, k2, ok, px2, py2;
+      for (tr = 0; tr < 3; tr++) { px2 = tr ? r() * W : p[0]; var top = bAt(2, px2) + 0.03, bot = bAt(3, px2) - 0.03; py2 = (top + (bot - top) * (tr ? r() : p[1])) * pm; ok = true;
+        if (p[2] > 0.02 * pm) for (k2 = 0; k2 < put.length; k2++) { var ddx = Math.abs(put[k2][0] - px2); if (ddx > W / 2) ddx = W - ddx; var ddy = (put[k2][1] - py2) * 1.5, lim = (put[k2][2] + p[2]) * 0.92; if (ddx * ddx + ddy * ddy < lim * lim) { ok = false; break; } }
+        if (ok) break; }
+      if (!ok) return; if (p[2] > 0.02 * pm) put.push([px2, py2, p[2]]); stone(px2, py2, p[2], false); });
+    for (i = 0; i < 70 * m; i++) { x = r() * W; stone(x, (1.36 + Math.sin(x / W * 12.566 + 1.1) * 0.035 + (r() - 0.5) * 0.05) * pm, (0.007 + r() * 0.013) * pm, false); }                      /* the lens of pea gravel in the silt */
+    for (i = 0; i < 60 * m; i++) { x = r() * W; var zz = 0.3 + r() * 4.3; if (zz > bAt(2, x) - 0.05 && zz < bAt(3, x) + 0.05) continue; stone(x, zz * pm, (0.008 + r() * 0.02) * pm, zz > 3.2); }   /* stray stones in the clays */
+    /* topsoil: fine roots hanging into the clay */
+    for (i = 0; i < 90 * m; i++) { x = r() * W; var y0 = (0.02 + r() * 0.2) * pm, len = (0.05 + r() * 0.3) * pm, bend = (r() - 0.5) * 30 * m, lw = 0.7 + r() * 1.5;
+      wrapX(x, 40, function (X) { q.strokeStyle = r() < 0.6 ? 'rgba(52,38,26,0.55)' : 'rgba(96,72,48,0.45)'; q.lineWidth = lw; q.beginPath(); q.moveTo(X, y0); q.quadraticCurveTo(X + bend, y0 + len * 0.5, X + bend * 0.4 + (r() - 0.5) * 10 * m, y0 + len); q.stroke(); }); }
+    /* the oxidised band where the gravel lies on the clay, and the water that seeps out of the gravel down the face */
+    q.save(); q.lineCap = 'round';
+    for (j = 0; j < 3; j++) { q.strokeStyle = 'rgba(150,92,42,' + (0.10 - j * 0.02) + ')'; q.lineWidth = (14 + j * 12) * m; q.beginPath(); for (x = -8; x <= W + 8; x += 8) { y = (bAt(3, x) + 0.02) * pm; if (x === -8) q.moveTo(x, y); else q.lineTo(x, y); } q.stroke(); }
+    for (i = 0; i < 16; i++) { x = r() * W; var w2 = (0.035 + r() * 0.09) * pm, l2 = (0.3 + r() * 0.75) * pm, yt = bAt(3, x) * pm;
+      wrapX(x, w2, function (X) { var g2 = q.createLinearGradient(0, yt, 0, yt + l2); g2.addColorStop(0, 'rgba(40,36,30,0.24)'); g2.addColorStop(1, 'rgba(40,36,30,0)'); q.fillStyle = g2; q.beginPath(); q.moveTo(X - w2 / 2, yt); q.lineTo(X + w2 / 2, yt); q.lineTo(X + w2 * 0.2, yt + l2); q.lineTo(X - w2 * 0.2, yt + l2); q.closePath(); q.fill(); }); }
+    q.restore();
+    return { map: c, bump: b, TW: STRATA.TW, TH: STRATA.TH }; });
+  /* the drainage gravel behind a retaining wall: crushed stone of 20–50 mm, loose. The tile is 0.45 m and closes on itself, so it reads as gravel on a face of
+     any size (the engine's gravel, laid two tiles to a face several metres long, read as a wall of rubble — and Xypex is shown on concrete, not on stonework). */
+  var gravelT = once('gravelT', function () { var S = 256, c = mkCanvas(S, S), q = c.getContext('2d'), b = mkCanvas(S, S), qb = b.getContext('2d'), r = lcg(7051), i; q.fillStyle = '#4e4a44'; q.fillRect(0, 0, S, S); qb.fillStyle = '#3c3c3c'; qb.fillRect(0, 0, S, S);
+    var TN = [[150, 144, 132], [168, 160, 144], [128, 128, 126], [140, 132, 118], [176, 170, 158]];
+    function col(T, k) { return 'rgb(' + Math.round(Math.min(255, T[0] * k)) + ',' + Math.round(Math.min(255, T[1] * k)) + ',' + Math.round(Math.min(255, T[2] * k)) + ')'; }
+    for (i = 0; i < 640; i++) { (function () { var x = r() * S, y = r() * S, rr = 4 + r() * r() * 10, ry = rr * (0.6 + r() * 0.35), an = r() * 3.14, T = TN[Math.floor(r() * TN.length)], k = 0.78 + r() * 0.3;
+      [-S, 0, S].forEach(function (ox) { [-S, 0, S].forEach(function (oy) { var X = x + ox, Y = y + oy; if (X < -16 || X > S + 16 || Y < -16 || Y > S + 16) return;
+        q.save(); q.translate(X, Y); q.rotate(an); q.fillStyle = 'rgba(20,18,16,0.42)'; q.beginPath(); q.ellipse(rr * 0.08, ry * 0.22, rr * 1.06, ry * 1.1, 0, 0, 7); q.fill();
+        var g = q.createRadialGradient(-rr * 0.3, -ry * 0.4, rr * 0.05, 0, 0, rr * 1.05); g.addColorStop(0, col(T, k * 1.12)); g.addColorStop(0.65, col(T, k)); g.addColorStop(1, col(T, k * 0.72)); q.fillStyle = g; q.beginPath(); q.ellipse(0, 0, rr, ry, 0, 0, 7); q.fill(); q.restore();
+        qb.save(); qb.translate(X, Y); qb.rotate(an); var gb = qb.createRadialGradient(-rr * 0.15, -ry * 0.2, rr * 0.05, 0, 0, rr); gb.addColorStop(0, 'rgb(235,235,235)'); gb.addColorStop(0.7, 'rgb(180,180,180)'); gb.addColorStop(1, 'rgb(96,96,96)'); qb.fillStyle = gb; qb.beginPath(); qb.ellipse(0, 0, rr, ry, 0, 0, 7); qb.fill(); qb.restore(); }); }); })(); }
+    return { map: c, bump: b }; });
   /* grass on the natural ground: a green turf with blades and bare patches */
   var grass = once('grass', function () { var S = 512, c = mkCanvas(S, S), q = c.getContext('2d'), r = lcg(7021), i; q.fillStyle = '#7f9253'; q.fillRect(0, 0, S, S); clouds(q, S, S, r, 5, 5, 0.5, 70, 180); clouds(q, S, S, r, 20, 20, 0.35, 80, 176); q.save(); q.globalCompositeOperation = 'multiply'; q.globalAlpha = 0.25; q.fillStyle = q.createPattern(greyNoise(64, 64, r, 120, 255), 'repeat'); q.fillRect(0, 0, S, S); q.restore();
     for (i = 0; i < 9000; i++) { q.strokeStyle = r() < 0.5 ? 'rgba(60,90,30,.45)' : 'rgba(170,190,110,.4)'; q.lineWidth = 1; q.beginPath(); var x = r() * S, y = r() * S; q.moveTo(x, y); q.lineTo(x + (r() - 0.5) * 4, y - 3 - r() * 7); q.stroke(); }
@@ -12668,7 +12769,7 @@ var CATX = (function () {
     var gr = q.createLinearGradient(0, 0, 0, S); gr.addColorStop(0, 'rgba(110,108,100,.55)'); gr.addColorStop(0.18, 'rgba(110,108,100,.22)'); gr.addColorStop(0.35, 'rgba(110,108,100,0)'); q.fillStyle = gr; q.fillRect(0, 0, S, S);
     for (i = 0; i < 260; i++) { var yy = r() * r() * S * 0.4; q.fillStyle = 'rgba(118,116,110,' + (0.12 + r() * 0.22) + ')'; q.beginPath(); q.ellipse(r() * S, yy, 1 + r() * 3, 2 + r() * 14, 0, 0, 7); q.fill(); } for (i = 0; i < 30; i++) { q.fillStyle = 'rgba(100,98,92,' + (0.15 + r() * 0.2) + ')'; q.fillRect(r() * S, r() * 60, 1 + r() * 2, 20 + r() * 90); } // streaks and runs of grout from the opening
     return c; });
-  return { earth: earth, strata: strata, grass: grass, ply: ply, steel: steel, fresh: fresh, drum: drum };
+  return { gravelT: gravelT, earth: earth, strata: strata, grass: grass, ply: ply, steel: steel, fresh: fresh, drum: drum };
 })();
 
 function CAView(host, o) {
@@ -12695,7 +12796,8 @@ function CAView(host, o) {
       conc: conc, xrM: xrM, formed: formed,
       slab: mat({ map: tex(TEX.slab(), { wrap: RWp, repeat: [1.6, 1.0] }), roughness: 0.9, envMapIntensity: 0.4, transparent: true }, conc), sawn: mat({ map: tex(TEX.aggregate(), { wrap: RWp, repeat: [1, 1] }), roughness: 0.85, envMapIntensity: 0.4, transparent: true }, conc),
       blind: mat({ map: tex(TEX.mortar(), { wrap: RWp, repeat: [6, 6] }), color: 0xa6a49c, roughness: 1, envMapIntensity: 0.1 }),
-      earthAt: function (w, h, cutFace) { var T = cutFace ? ST : EA; return mat({ map: tex(T.map, { wrap: RWp, repeat: [Math.max(1, w / 1.2), Math.max(1, h / 1.2)] }), bumpMap: tex(T.bump, { wrap: RWp, repeat: [Math.max(1, w / 1.2), Math.max(1, h / 1.2)], srgb: false }), bumpScale: 0.012, roughness: 1, envMapIntensity: 0.08 }); },
+      gravelAt: function (w, h) { var G = CATX.gravelT(), rp = [Math.max(0.5, w / 0.45), Math.max(0.5, h / 0.45)]; return mat({ map: tex(G.map, { wrap: RWp, repeat: rp }), bumpMap: tex(G.bump, { wrap: RWp, repeat: rp, srgb: false }), bumpScale: 0.012, roughness: 0.95, envMapIntensity: 0.15 }); },
+      earthAt: function (w, h, cutFace, u0, y0) { var T = cutFace ? ST : EA; if (cutFace && T.TH) { var rp = [w / T.TW, h / T.TH], mp = tex(T.map, { wrap: RWp, repeat: rp }), bp = tex(T.bump, { wrap: RWp, repeat: rp, srgb: false }), em; [mp, bp].forEach(function (t) { t.wrapT = THREE.ClampToEdgeWrapping; t.offset.x = ((((u0 || 0) / T.TW) % 1) + 1) % 1; }); em = mat({ map: mp, bumpMap: bp, bumpScale: 0.02, roughness: 1, envMapIntensity: 0.08 }); em.userData.strata = { y0: y0 || 0, t: [mp, bp], TH: T.TH }; return em; } return mat({ map: tex(T.map, { wrap: RWp, repeat: [Math.max(1, w / 1.2), Math.max(1, h / 1.2)] }), bumpMap: tex(T.bump, { wrap: RWp, repeat: [Math.max(1, w / 1.2), Math.max(1, h / 1.2)], srgb: false }), bumpScale: 0.012, roughness: 1, envMapIntensity: 0.08 }); },
       gravel: mat({ map: tex(RCTX.gravel, { wrap: RWp, repeat: [2, 2] }), bumpMap: tex(RCTX.gravel, { wrap: RWp, repeat: [2, 2], srgb: false }), bumpScale: 0.01, roughness: 0.95, envMapIntensity: 0.2 }),
       grass: mat({ map: tex(CATX.grass(), { wrap: RWp, repeat: [6, 6] }), roughness: 1, envMapIntensity: 0.1 }), asphalt: mat({ map: tex(RMTX.asphalt(), { wrap: RWp, repeat: [4, 2] }), bumpMap: tex(RMTX.asphalt(), { wrap: RWp, repeat: [4, 2], srgb: false }), bumpScale: 0.004, roughness: 0.95, envMapIntensity: 0.1 }),
       rebar: mat({ map: tex(RB.map, { wrap: RWp, repeat: [1, 6] }), bumpMap: tex(RB.bump, { wrap: RWp, repeat: [1, 6], srgb: false }), bumpScale: 0.003, color: 0xb6a292, roughness: 0.78, metalness: mt(0.2), envMapIntensity: 0.4 }),
@@ -12722,7 +12824,9 @@ function CAView(host, o) {
     function cx0(x) { return cut ? Math.max(x, XC) : x; }
     parts.walls = []; parts.fresh = []; parts.form = []; parts.rebar = null; parts.cj = []; parts.fills = []; parts.anch = {}; parts.KT = new RCKit.Kit({ keep: keep, block: function (x0, x1, y0, y1, z0, z1) { return box(x0, x1, y0, y1, z0, z1, M.formed(0.3, 0.3)); } });
     /* the ground: the floor of the excavation (blinding under the slab), the banks beyond the working space with their cut faces showing the strata, the natural ground on top */
-    function earthBox(x0, x1, y0, y1, z0, z1) { var fx = M.earthAt(z1 - z0, y1 - y0, true), fz = M.earthAt(x1 - x0, y1 - y0, true), fy = M.earthAt(x1 - x0, z1 - z0, false); return box(x0, x1, y0, y1, z0, z1, [fx, fx, fy, fy, fz, fz], g, { noCast: true }); }
+    var ERECS = [], ETOP = yG; function ereg(rec) { rec.t.forEach(function (t) { t.offset.y = 1 + (rec.y0 - ETOP) / rec.TH; }); }   /* the profile hangs from the ground level: a face that starts lower shows the deeper layers */
+    function earthTop(top) { ETOP = top; ERECS.forEach(ereg); }
+    function earthBox(x0, x1, y0, y1, z0, z1) { var fx = M.earthAt(z1 - z0, y1 - y0, true, z0, y0), fz = M.earthAt(x1 - x0, y1 - y0, true, x0, y0), fy = M.earthAt(x1 - x0, z1 - z0, false); [fx, fz].forEach(function (em) { var rec = em.userData.strata; if (rec) { ERECS.push(rec); ereg(rec); } }); return box(x0, x1, y0, y1, z0, z1, [fx, fx, fy, fy, fz, fz], g, { noCast: true }); }
     earthBox(xCut, farX, yBl - 1.2, yBl, farZ, zCut); // the ground below everything
     box(cx0(xl - 0.1), xr2 + 0.1, yBl, yBot, zb - 0.1, zf2 + 0.1, M.blind, g, { noCast: true }); // the blinding layer
     if (!R) { earthBox(xCut, farX, yBl, yG, farZ, zBank); earthBox(xBank, farX, yBl, yG, zBank, zCut); } // the banks behind and to the right
@@ -12743,7 +12847,7 @@ function CAView(host, o) {
         var back = [[xCut, xBank, yBl, yBot, zBank, zb - 0.1], [xCut, xBank, yBot, 0, zBank, zb], [xCut, xBank, 0, yG, zBank, -wt]]; // against the blinding, the slab edge, the wall face
         var right = [[xr2 + 0.1, xBank, yBl, yBot, zb - 0.1, zCut], [xr2, xBank, yBot, 0, zb, zCut], [xRo, xBank, 0, yG, -wt, zCut]];
         stack(back); stack(right); watStack(back); watStack(right);
-      } else { var gz = -wt - 0.35; stack([[xCut, farX, 0, yG - 0.35, gz, -wt]], M.gravel); stack([[xCut, farX, 0, yG - 0.15, farZ, gz]]); watStack([[xCut, farX, 0, yG, farZ, -wt]]); var dr = mesh(new THREE.CylinderGeometry(0.06, 0.06, farX - xCut, 20), M.pipe); dr.rotation.z = Math.PI / 2; dr.position.set((xCut + farX) / 2, 0.08, -wt - 0.18); parts.drain = dr; }
+      } else { var gz = -wt - 0.35, gW = farX - xCut, gH = yG - 0.35, gA = M.gravelAt(gW, gH), gB = M.gravelAt(0.35, gH), gT = M.gravelAt(gW, 0.35); stack([[xCut, farX, 0, yG - 0.35, gz, -wt]], [gB, gB, gT, gT, gA, gA]);   /* drainage gravel, at its own grain on every face */ stack([[xCut, farX, 0, yG - 0.15, farZ, gz]]); watStack([[xCut, farX, 0, yG, farZ, -wt]]); var dr = mesh(new THREE.CylinderGeometry(0.06, 0.06, farX - xCut, 20), M.pipe); dr.rotation.z = Math.PI / 2; dr.position.set((xCut + farX) / 2, 0.08, -wt - 0.18); parts.drain = dr; }
       parts.water = water;
     })();
     /* the slab (the earlier pour) with its kicker under the walls, the starter bars in it; the slab top is the floor */
@@ -12854,9 +12958,10 @@ function CAView(host, o) {
       (function () {
         var kraft = mat({ color: 0xd8c7a0, roughness: 0.92 }), band = mat({ color: 0x9a2617, roughness: 0.7 }), white = mat({ color: 0xf3f3ef, roughness: 0.42, envMapIntensity: 0.7 }), wood = mat({ color: 0xb08a55, roughness: 0.9 }), steelW = mat({ color: 0x8f949a, metalness: mt(0.7), roughness: 0.4 });
         /* the label is the manufacturer's own print (parts/core/packart.js), front and back of the pail as on the real one */
-        function label(key) { var t, c = XY_PACK.label(key, function () { if (t) { t.needsUpdate = true; dirty = true; } }); t = tex(c, { aniso: 8 }); return mat({ map: t, roughness: 0.5, envMapIntensity: 0.6 }); }
+        function label(key) { var t, c = XY_PACK.label(key, function () { if (t) { t.needsUpdate = true; dirty = true; } }); t = tex(c, { aniso: 8 }); return mat({ map: t, roughness: 0.5, envMapIntensity: 0.6, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); }
         var red = label('ADMIX'), gold = label('BIOSAN');
-        function pail(lm) { var p = new THREE.Group(), b = mesh(new THREE.CylinderGeometry(0.15, 0.132, 0.36, 28), white, p); b.position.y = 0.18; var lid = mesh(new THREE.CylinderGeometry(0.158, 0.158, 0.026, 28), white, p); lid.position.y = 0.372; [0, Math.PI].forEach(function (a0) { var lb = mesh(new THREE.CylinderGeometry(0.1467, 0.1362, 0.21, 16, 1, true, a0 - 0.9135, 1.827), lm, p, { noCast: true }); lb.position.y = 0.165; }); var hd = mesh(new THREE.TorusGeometry(0.152, 0.005, 6, 24, Math.PI), steelW, p, { noCast: true }); hd.position.y = 0.3; hd.rotation.x = Math.PI / 2 + 0.5; return p; }
+        var darkP = mat({ color: 0x232426, roughness: 0.6 });
+        function pail(lm) { var p = XY_PAIL.build(THREE, { s: 0.92, white: white, steel: steelW, dark: darkP, label: lm, keep: typeof keep === 'function' ? keep : null }); return p; }   /* the site's own pail (core/xycore.js XY_PAIL) */
         function bag(parent, x, y, z, ry) { var bgp = new THREE.Group(); mesh(new THREE.BoxGeometry(0.46, 0.1, 0.3), kraft, bgp); var bd = mesh(new THREE.BoxGeometry(0.16, 0.103, 0.303), band, bgp, { noCast: true }); bd.position.x = -0.06; bgp.position.set(x, y, z); bgp.rotation.y = ry || 0; parent.add(bgp); return bgp; }
         var PL = new THREE.Group(); g.add(PL); parts.pailG = PL; PL.position.set(R ? Math.max(0.5, hw - 0.6) : xBank + 0.95, R ? 0.0 : yG + 0.02, R ? zb - 0.75 : -wt - 0.8); PL.rotation.y = R ? 0.3 : -0.4;
         [-0.36, 0, 0.36].forEach(function (z) { box(-0.6, 0.6, 0, 0.09, z - 0.05, z + 0.05, wood, PL); }); box(-0.6, 0.6, 0.09, 0.115, -0.42, 0.42, wood, PL);
@@ -12943,7 +13048,7 @@ function CAView(host, o) {
     /* camera */
     var c = camFor(stage); v.az = c.az; v.el = c.el; v.dist = c.dist; target.set(c.t[0], c.t[1], c.t[2]); goal = null; userCam = false; sun.userData.groundAt(-40); sun.target.position.set(0.5, 0.6, (zBank + farZ) / 2 + 1.0); g.updateMatrixWorld(true);
     function pts2(pp, f) { return pp[Math.round(f * (pp.length - 1))]; }
-    parts.extra = []; if (CA3D.DRESS) { try { var DCX = { THREE: THREE, g: g, P: P, M: M, box: box, mesh: mesh, mat: mat, keep: keep, cut: cut, cx0: cx0, earthBox: earthBox, parts: parts, d: { hw: hw, wt: wt, H: H, st: st, zf: zf, yG: yG, K: K, xl: xl, xr: xr2, zb: zb, zf2: zf2, xCut: xCut, zCut: zCut, farX: farX, farZ: farZ, xBank: xBank, zBank: zBank },
+    parts.extra = []; if (CA3D.DRESS) { try { var DCX = { THREE: THREE, g: g, P: P, M: M, box: box, mesh: mesh, mat: mat, keep: keep, cut: cut, cx0: cx0, earthBox: earthBox, earthTop: earthTop, parts: parts, d: { hw: hw, wt: wt, H: H, st: st, zf: zf, yG: yG, K: K, xl: xl, xr: xr2, zb: zb, zf2: zf2, xCut: xCut, zCut: zCut, farX: farX, farZ: farZ, xBank: xBank, zBank: zBank },
       add: function (ob, at, a, b, kind) { if (!ob) return ob; parts.extra.push({ o: ob, at: at || 'service', a: a == null ? 0.3 : a, b: b == null ? 0.9 : b, kind: kind || 'show' }); return ob; } }; parts.dcx = DCX; if (CA3D.DRESS.common) CA3D.DRESS.common(DCX); if (P.dress && CA3D.DRESS[P.dress]) CA3D.DRESS[P.dress](DCX); } catch (e) { if (window.console) console.warn('ca dress', e); }
       try { if (CA3D.CREW && !FAST) CA3D.CREW(DCX); } catch (e) { if (window.console) console.warn('ca crew', e); } }
     state(); dirty = true;
@@ -13034,11 +13139,13 @@ function CAView(host, o) {
     if (tw < 1 && !frozen) { tw = Math.min(1, tw + dt / twDur); dirty = true; } glide(dt);
     var gx = xray ? 1 : 0; if (Math.abs(gx - xr) > 0.004) { xr += (gx - xr) * 0.16; dirty = true; } else if (xr !== gx) { xr = gx; dirty = true; }
     if (animating()) { if (!parts.crewLive || (parts.truckG && parts.truckG.visible) || now - (self.crewT || 0) > 46) { dirty = true; self.crewT = now; } }
-    if (dirty && fitRenderer(renderer, cam, host)) { var t0 = performance.now(); state(); place(); cam.updateMatrixWorld(); xySite(); renderer.render(scene, cam); dirty = false; gov.tick(performance.now() - t0 + 8); if (self.onRender) self.onRender(); }
+    if (dirty) hq.leave();
+    if (dirty && fitRenderer(renderer, cam, host)) { var t0 = performance.now(); state(); place(); cam.updateMatrixWorld(); xySite(); renderer.render(scene, cam); dirty = false; gov.tick(performance.now() - t0 + 8); if (self.onRender) self.onRender(); hq.moved(now); }
+    else if (!dirty) hq.rest(now);
   }
   function frame(now) { if (!visible) { running = false; return; } requestAnimationFrame(frame); try { step(now); } catch (e) { if (window.console && !self.warned) { self.warned = true; console.error('admixture 3D', e); } } }
   function still() { try { if (fitRenderer(renderer, cam, host)) { state(); place(); cam.updateMatrixWorld(); xySite(); renderer.render(scene, cam); if (self.onRender) self.onRender(); } } catch (e) {} }
-  this.still = still; renderer.userData.redraw = function () { dirty = true; if (!visible) still(); };
+  var hq = new StillHQ(renderer, still); this.still = still; renderer.userData.redraw = function () { dirty = true; if (!visible) still(); };
   requestAnimationFrame(still);
   new IntersectionObserver(function (en) { var was = visible; visible = en[0].isIntersecting; if (visible && !was) dirty = true; if (visible && !running) { running = true; requestAnimationFrame(frame); } }, { threshold: 0.1 }).observe(host);
   window.addEventListener('resize', function () { dirty = true; });
@@ -13331,6 +13438,7 @@ CA3D.CREW = function (c) {
    below, ruled in metres of the site. */
 CA3D.SITE = function (c, at) {
   var d = c.d, P = c.P, T = c.THREE, R = !!P.retain, gy = at.gy, k = at.k, L = 46, yB = -P.st - 1.25, e = 0.004, w = 0.5, G = new T.Group(); c.g.add(G); c.parts.siteG = G;
+  if (c.earthTop) c.earthTop(Math.max(gy, d.yG));   /* the ground level the profile of the ground hangs from: the site's own */
   function eb(x0, x1, y0, y1, z0, z1) { var m = c.earthBox(x0, x1, y0, y1, z0, z1); if (m) { G.add(m); m.castShadow = false; } return m; }
   eb(d.xCut - L, d.xCut, yB, gy - e, d.farZ - w, d.farZ);                       /* left of the block: the ground behind it, sawn along its back plane */
   eb(d.farX, d.farX + w, yB, gy - e, d.zCut, d.zCut + L);                       /* in front of the block: the ground to its right, sawn along its right plane */
@@ -13420,9 +13528,10 @@ function PFKit(ctx) {
   function sleeveWet(col) { var S = 256, c = mkCanvas(S, S), q = c.getContext('2d'), r = lcg(9312), i; q.fillStyle = col; q.fillRect(0, 0, S, S); for (i = 0; i < 6000; i++) { q.strokeStyle = r() < 0.5 ? 'rgba(0,0,0,.18)' : 'rgba(255,255,255,.22)'; q.lineWidth = 1; var x = r() * S, y = r() * S; q.beginPath(); q.moveTo(x, y); q.lineTo(x + (r() - 0.5) * 2, y + 2 + r() * 4); q.stroke(); } return c; }
   var WV = weave(), KN = knurl();
   var M = this.M = {
-    coverall: mat({ color: 0x2c3e5c, roughness: 0.88, bumpMap: tex(WV, { wrap: RW, repeat: [8, 8], srgb: false }), bumpScale: 0.0015, envMapIntensity: 0.3 }), coverallDk: mat({ color: 0x22314a, roughness: 0.9, envMapIntensity: 0.25 }),
+    hard: mat({ color: 0x0075c9, roughness: 0.32, envMapIntensity: 0.9 }), lampLens: mat({ color: 0xf2f4f6, emissive: 0xfff2d2, emissiveIntensity: 0.3, roughness: 0.2, envMapIntensity: 1.0 }),
+    coverall: mat({ color: 0x2c3e5c, roughness: 0.88, bumpMap: tex(WV, { wrap: RW, repeat: [8, 8], srgb: false }), bumpScale: 0.0015, envMapIntensity: 0.3 }), coverallDk: mat({ color: 0xb0d018, roughness: 0.9, envMapIntensity: 0.25 }),
     hivis: mat({ color: 0xd6d9d2, emissive: 0x303030, roughness: 0.4, envMapIntensity: 1.2 }), skin: pmat({ color: 0xc69a7c, roughness: 0.58, envMapIntensity: 0.45, clearcoat: 0.12, clearcoatRoughness: 0.5, sheen: 0.25, sheenColor: new THREE.Color(0xd4a08a), sheenRoughness: 0.8 }), hair: mat({ color: 0x2a221c, roughness: 0.85 }),
-    glove: mat({ color: 0x2b5fa6, roughness: 0.55, envMapIntensity: 0.55 }), boot: mat({ color: 0xa8743a, roughness: 0.82, bumpMap: tex(WV, { wrap: RW, repeat: [3, 3], srgb: false }), bumpScale: 0.0006, envMapIntensity: 0.4 }), sole: mat({ color: 0x3a2f24, roughness: 0.9 }), cap: mat({ color: 0x23262b, roughness: 0.8 }),
+    glove: mat({ color: 0x80807a, roughness: 0.55, envMapIntensity: 0.55 }), boot: mat({ color: 0x3a2a1c, roughness: 0.82, bumpMap: tex(WV, { wrap: RW, repeat: [3, 3], srgb: false }), bumpScale: 0.0006, envMapIntensity: 0.4 }), sole: mat({ color: 0x3a2f24, roughness: 0.9 }), cap: mat({ color: 0x23262b, roughness: 0.8 }),
     mask: mat({ color: 0x6b7077, roughness: 0.55, envMapIntensity: 0.6 }), maskSoft: mat({ color: 0x3f4246, roughness: 0.7 }), filter: mat({ color: 0xd85a8a, roughness: 0.6 }), filterBody: mat({ color: 0x4a4d52, roughness: 0.55, envMapIntensity: 0.5 }), eyeWhite: mat({ color: 0xf0ece6, roughness: 0.25, envMapIntensity: 0.9 }), iris: mat({ color: 0x4a3a2a, roughness: 0.2, envMapIntensity: 1.0 }), lens: pmat({ color: 0x9fb7c8, roughness: 0.05, transparent: true, opacity: 0.45, clearcoat: 1, envMapIntensity: 1.6 }),
     alu: mat({ color: 0xc9cdd1, metalness: mt(0.8), roughness: 0.28, envMapIntensity: 1.2 }), aluDull: mat({ color: 0xb2b7bb, metalness: mt(0.7), roughness: 0.45, envMapIntensity: 1.0 }), steel: mat({ color: 0x8a9096, metalness: mt(0.75), roughness: 0.38, envMapIntensity: 1.0 }), chrome: mat({ color: 0xe2e6e9, metalness: mt(0.95), roughness: 0.12, envMapIntensity: 1.5 }),
     grip: mat({ color: 0x1e1f21, roughness: 0.75, bumpMap: tex(KN, { wrap: RW, repeat: [2, 6], srgb: false }), bumpScale: 0.002 }), yellowPl: mat({ color: 0xe8b415, roughness: 0.42, envMapIntensity: 0.8 }), greyPl: mat({ color: 0x5d6268, roughness: 0.5, envMapIntensity: 0.7 }), blackPl: mat({ color: 0x1b1c1e, roughness: 0.45, envMapIntensity: 0.7 }), redPl: mat({ color: 0xc0282b, roughness: 0.4, envMapIntensity: 0.9 }), whitePl: mat({ color: 0xe9e9e5, roughness: 0.42, envMapIntensity: 0.8 }), orangePl: mat({ color: 0xe0661c, roughness: 0.4, envMapIntensity: 0.9 }),
@@ -13446,25 +13555,51 @@ function PFKit(ctx) {
      o.twist (chest yaw), o.yaw (pelvis yaw), o.side (lateral bend); o.hands [L, R] grip points (local), o.axes [L, R] grip axes;
      o.feet [L, R] ankle targets, o.footYaw [L, R], o.footPitch [L, R]; o.kneel (0…1, right knee down), o.sit; o.look (point, local);
      o.walk { phase, stride } and o.stanceZ as a fallback when no feet are given. L is the figure's −x side. */
-  var FAB = (function () { function base(W, H, seed) { var c = mkCanvas(W, H), q = c.getContext('2d'), r = lcg(seed), i; q.fillStyle = '#26384f'; q.fillRect(0, 0, W, H); for (i = 0; i < W * H / 40; i++) { q.fillStyle = r() < 0.5 ? 'rgba(255,255,255,.035)' : 'rgba(0,0,0,.06)'; q.fillRect(r() * W, r() * H, 1 + r() * 2, 1 + r() * 2); } return [c, q]; }
-      function refl(q, W, y0, y1) { var g = q.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, '#a9aeac'); g.addColorStop(0.5, '#e4e7e5'); g.addColorStop(1, '#a9aeac'); q.fillStyle = g; q.fillRect(0, y0, W, y1 - y0); q.fillStyle = 'rgba(0,0,0,.25)'; q.fillRect(0, y0, W, 1); q.fillRect(0, y1 - 1, W, 1); }
-      function seam(q, x0, y0, x1, y1) { q.strokeStyle = 'rgba(10,18,30,.6)'; q.lineWidth = 1.5; q.setLineDash([3, 2]); q.beginPath(); q.moveTo(x0, y0); q.lineTo(x1, y1); q.stroke(); q.setLineDash([]); }
-      var H0 = -0.165, H1 = 0.565, T = base(512, 512, 7001), tq = T[1]; function vy(h) { return 512 - (h - H0) / (H1 - H0) * 512; }
-      refl(tq, 512, vy(0.335), vy(0.305)); tq.fillStyle = '#1d2c40'; tq.fillRect(0, vy(0.15), 512, vy(0.115) - vy(0.15)); // the chest band, the elasticated waist
-      tq.fillStyle = '#121b28'; tq.fillRect(253, vy(0.55), 6, vy(-0.12) - vy(0.55)); tq.fillStyle = '#8d949b'; tq.fillRect(255, vy(0.55), 2, vy(-0.12) - vy(0.55)); // the zip
-      tq.fillStyle = '#20314a'; tq.fillRect(186, vy(0.455), 52, vy(0.37) - vy(0.455)); seam(tq, 186, vy(0.455), 238, vy(0.455)); seam(tq, 186, vy(0.37), 238, vy(0.37)); seam(tq, 186, vy(0.455), 186, vy(0.37)); seam(tq, 238, vy(0.455), 238, vy(0.37)); tq.fillStyle = '#121b28'; tq.fillRect(200, vy(0.462), 24, 4); // the chest pocket with its flap
-      seam(tq, 128, 0, 128, 512); seam(tq, 384, 0, 384, 512); seam(tq, 0, vy(0.47), 120, vy(0.47)); seam(tq, 392, vy(0.47), 512, vy(0.47)); // side seams, the back yoke
-      var A = base(256, 256, 7002), aq = A[1]; refl(aq, 256, 256 * 0.33, 256 * 0.385); aq.fillStyle = '#1d2c40'; aq.fillRect(0, 256 * 0.93, 256, 256 * 0.07); seam(aq, 0, 256 * 0.925, 256, 256 * 0.925); // the sleeve: band on the forearm, the cuff
-      var L = base(256, 512, 7003), lq = L[1]; refl(lq, 256, 512 * 0.115, 512 * 0.15); refl(lq, 256, 512 * 0.185, 512 * 0.22); lq.fillStyle = '#1d2c40'; lq.fillRect(0, 512 * 0.955, 256, 512 * 0.045);
-      lq.fillStyle = '#16181b'; lq.beginPath(); if (lq.roundRect) lq.roundRect(86, 512 * 0.36, 84, 512 * 0.14, 14); else lq.rect(86, 512 * 0.36, 84, 512 * 0.14); lq.fill(); lq.strokeStyle = 'rgba(255,255,255,.12)'; lq.lineWidth = 2; lq.stroke(); // the trouser leg: two bands below the knee, the knee pad, the hem
-      function spatter(q, W, H, hTop, n, seed) { var r = lcg(seed), i; for (i = 0; i < n; i++) { var y = r() * r() * H * hTop, x = r() * W, rr = 0.6 + r() * r() * 3.2; q.fillStyle = r() < 0.7 ? 'rgba(206,201,186,' + (0.5 + r() * 0.45).toFixed(2) + ')' : 'rgba(128,126,118,' + (0.3 + r() * 0.4).toFixed(2) + ')'; q.beginPath(); q.ellipse(x, y, rr, rr * (0.6 + r() * 0.6), r() * 3, 0, 7); q.fill(); } } /* the spatter of resin and filler on the shins and the cuffs, as it is after a day on the floor */
-      spatter(lq, 256, 512, 0.34, 170, 7004); spatter(aq, 256, 256, 0.22, 60, 7005);
-      return { torso: T[0], arm: A[0], leg: L[0], H0: H0, H1: H1 }; })();
+  /* The crew of the guides wears what the crew of the jobsite wears (home/src/23_crew.js): high-visibility long sleeves; a class-2 vest with two hoops and
+     two braces of 50 mm reflective tape — an H on the chest, an X on the back; work trousers with bands below the knee; gloves; safety boots; the blue hard
+     hat of the applicators with its cap lamp. The colours are the jobsite's own (W.C in home/src/20_world_a.js: vest 0xcdf21c, jeans 0x2f3f55), written here as
+     the sRGB values a texture needs. The vest is a shell of its own over the trunk (FAB.vest: its cloth, cut out where it is open; .vestBump; .vestGlow — the
+     fluorescent cloth gives back a little more light than falls on it, the tape a trace of the light it is seen by). */
+  var FAB = (function () {
+    var VEST = [232, 249, 94], SHIRT = [216, 233, 87], TROU = [119, 136, 156];
+    function rgb(c, k) { k = k == null ? 1 : k; return 'rgb(' + Math.round(c[0] * k) + ',' + Math.round(c[1] * k) + ',' + Math.round(c[2] * k) + ')'; }
+    function base(W, H, seed, col) { var c = mkCanvas(W, H), q = c.getContext('2d'), r = lcg(seed), i; q.fillStyle = col; q.fillRect(0, 0, W, H); for (i = 0; i < W * H / 40; i++) { q.fillStyle = r() < 0.5 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.06)'; q.fillRect(r() * W, r() * H, 1 + r() * 2, 1 + r() * 2); } return [c, q]; }
+    function refl(q, W, y0, y1) { var g = q.createLinearGradient(0, y0, 0, y1); g.addColorStop(0, '#a9aeac'); g.addColorStop(0.5, '#e4e7e5'); g.addColorStop(1, '#a9aeac'); q.fillStyle = g; q.fillRect(0, y0, W, y1 - y0); q.fillStyle = 'rgba(0,0,0,.25)'; q.fillRect(0, y0, W, 1); q.fillRect(0, y1 - 1, W, 1); }
+    function seam(q, x0, y0, x1, y1, col) { q.strokeStyle = col || 'rgba(70,84,22,.5)'; q.lineWidth = 1.5; q.setLineDash([3, 2]); q.beginPath(); q.moveTo(x0, y0); q.lineTo(x1, y1); q.stroke(); q.setLineDash([]); }
+    var H0 = -0.165, H1 = 0.565; function vy(h) { return 512 - (h - H0) / (H1 - H0) * 512; }
+    /* the trunk under the vest: the shirt down to the belt, the trousers below (front centre at x = 256, the back at x = 0 ≡ 512) */
+    var T = base(512, 512, 7001, rgb(SHIRT)), tq = T[1];
+    tq.fillStyle = rgb(TROU); tq.fillRect(0, vy(-0.012), 512, 512 - vy(-0.012)); tq.fillStyle = '#2a2622'; tq.fillRect(0, vy(-0.012), 512, vy(-0.045) - vy(-0.012)); tq.fillStyle = '#9a9690'; tq.fillRect(245, vy(-0.014), 22, vy(-0.043) - vy(-0.014));   // the trousers, the belt, its buckle
+    tq.fillStyle = rgb(SHIRT, 0.8); tq.fillRect(253, vy(0.56), 6, vy(-0.012) - vy(0.56)); seam(tq, 128, 0, 128, vy(-0.012)); seam(tq, 384, 0, 384, vy(-0.012));   // the placket, the side seams
+    /* the vest */
+    var V = mkCanvas(512, 512), vq = V.getContext('2d'), VB = mkCanvas(512, 512), bq = VB.getContext('2d'), VG = mkCanvas(512, 512), gq = VG.getContext('2d'), yT = vy(0.553), yH = vy(-0.022), TP = 25, k;
+    function holes(q, grow) {   /* where the vest is open: the V of the neck, the scoop at the back of the neck */
+      q.beginPath(); q.moveTo(256 - 36 - grow, yT - 2); q.lineTo(256, vy(0.395) + grow * 1.6); q.lineTo(256 + 36 + grow, yT - 2); q.closePath(); q.fill();
+      [0, 512].forEach(function (x) { q.beginPath(); q.ellipse(x, yT - 2, 34 + grow, vy(0.518) - yT + grow, 0, 0, 7); q.fill(); }); }   /* the armholes need no cutting: the sleeve comes out through the shell where the arm leaves the trunk */
+    function line(q, x0, y0, x1, y1, w, col) { q.strokeStyle = col; q.lineWidth = w; q.lineCap = 'butt'; [-512, 0, 512].forEach(function (o) { q.beginPath(); q.moveTo(x0 + o, y0); q.lineTo(x1 + o, y1); q.stroke(); }); }
+    function tapes(q, edge, body2, shine) {   /* two hoops; two braces up the chest and over the shoulders; on the back they cross */
+      var L = [[0, vy(0.19), 512, vy(0.19), 35], [0, vy(0.07), 512, vy(0.07), 35], [212, vy(0.2), 212, yT - 4, TP], [300, vy(0.2), 300, yT - 4, TP], [468, yT - 4, 556, vy(0.2), 28], [44, yT - 4, -44, vy(0.2), 28]];   /* 50 mm: 35 px down the trunk (701 px/m), 25 px round it (512 px ≈ 1 m) */
+      if (edge) L.forEach(function (p) { line(q, p[0], p[1], p[2], p[3], p[4] + 2.5, edge); }); L.forEach(function (p) { line(q, p[0], p[1], p[2], p[3], p[4], body2); }); if (shine) L.forEach(function (p) { line(q, p[0], p[1], p[2], p[3], p[4] * 0.42, shine); }); }
+    vq.fillStyle = rgb(VEST); vq.fillRect(0, yT, 512, yH - yT);
+    var kn = mkCanvas(4, 4), kq = kn.getContext('2d'); kq.fillStyle = 'rgba(70,84,22,0.22)'; kq.fillRect(0, 0, 1, 1); kq.fillRect(2, 2, 1, 1); vq.fillStyle = vq.createPattern(kn, 'repeat'); vq.fillRect(0, yT, 512, yH - yT);   // the open mesh of the knit
+    tapes(vq, 'rgba(60,64,62,0.55)', '#c2c6c5', '#eceeed');
+    vq.fillStyle = '#2c3033'; vq.fillRect(251, vy(0.4), 10, yH - vy(0.4)); vq.fillStyle = '#9aa0a4'; vq.fillRect(255, vy(0.4), 2, yH - vy(0.4));   // the zip
+    vq.fillStyle = '#3a3f44'; vq.fillRect(0, yH - 6, 512, 6); vq.globalCompositeOperation = 'source-atop'; holes(vq, 6); vq.globalCompositeOperation = 'destination-out'; holes(vq, 0); vq.globalCompositeOperation = 'source-over';   // the binding along the hem and round every opening, then the openings themselves
+    bq.fillStyle = '#7c7c7c'; bq.fillRect(0, 0, 512, 512); bq.fillStyle = bq.createPattern(kn, 'repeat'); bq.fillRect(0, 0, 512, 512); tapes(bq, '#5a5a5a', '#b4b4b4', null); bq.fillStyle = '#c4c4c4'; bq.fillRect(0, yH - 6, 512, 6); bq.fillStyle = '#585858'; bq.fillRect(253, vy(0.4), 6, yH - vy(0.4));
+    for (k = 0; k < 9; k++) { var fy = vy(0.02 + k * 0.055), g2 = bq.createLinearGradient(0, fy - 5, 0, fy + 5); g2.addColorStop(0, 'rgba(0,0,0,0)'); g2.addColorStop(0.45, 'rgba(255,255,255,.22)'); g2.addColorStop(0.6, 'rgba(0,0,0,.22)'); g2.addColorStop(1, 'rgba(0,0,0,0)'); bq.fillStyle = g2; bq.fillRect(0, fy - 5, 512, 10); }   // the vest hangs in soft folds
+    gq.fillStyle = '#000000'; gq.fillRect(0, 0, 512, 512); gq.drawImage(V, 0, 0);
+    var A = base(256, 256, 7002, rgb(SHIRT)), aq = A[1]; refl(aq, 256, 256 * 0.33, 256 * 0.385); aq.fillStyle = rgb(SHIRT, 0.78); aq.fillRect(0, 256 * 0.93, 256, 256 * 0.07); seam(aq, 0, 256 * 0.925, 256, 256 * 0.925); // the sleeve: band on the forearm, the cuff
+    var L2 = base(256, 512, 7003, rgb(TROU)), lq = L2[1]; refl(lq, 256, 512 * 0.115, 512 * 0.15); refl(lq, 256, 512 * 0.185, 512 * 0.22); lq.fillStyle = rgb(TROU, 0.72); lq.fillRect(0, 512 * 0.955, 256, 512 * 0.045);
+    lq.fillStyle = rgb(TROU, 0.66); lq.beginPath(); if (lq.roundRect) lq.roundRect(86, 512 * 0.36, 84, 512 * 0.14, 14); else lq.rect(86, 512 * 0.36, 84, 512 * 0.14); lq.fill(); lq.strokeStyle = 'rgba(255,255,255,.14)'; lq.lineWidth = 2; lq.stroke(); // the trouser leg: two bands below the knee, the knee patch, the hem
+    function spatter(q, W, H, hTop, n, seed) { var r = lcg(seed), i; for (i = 0; i < n; i++) { var y = r() * r() * H * hTop, x = r() * W, rr = 0.6 + r() * r() * 3.2; q.fillStyle = r() < 0.7 ? 'rgba(206,203,194,' + (0.5 + r() * 0.45).toFixed(2) + ')' : 'rgba(128,127,122,' + (0.3 + r() * 0.4).toFixed(2) + ')'; q.beginPath(); q.ellipse(x, y, rr, rr * (0.6 + r() * 0.6), r() * 3, 0, 7); q.fill(); } } /* the spatter of slurry on the shins and the cuffs, as it is after a day at the wall */
+    spatter(lq, 256, 512, 0.34, 170, 7004); spatter(aq, 256, 256, 0.22, 60, 7005);
+    return { torso: T[0], arm: A[0], leg: L2[0], vest: V, vestBump: VB, vestGlow: VG, H0: H0, H1: H1 }; })();
   /* the folds of the cloth: soft creases round the knee and the elbow, at the waist, drawn as relief over the weave */
   function folds(W, H, seed, bands) { var c = mkCanvas(W, H), q = c.getContext('2d'), r = lcg(seed), i, k; q.fillStyle = '#808080'; q.fillRect(0, 0, W, H); for (i = 0; i < W * H / 6; i++) { q.fillStyle = r() < 0.5 ? 'rgba(255,255,255,.05)' : 'rgba(0,0,0,.05)'; q.fillRect(r() * W, r() * H, 1, 1); }
     bands.forEach(function (bd) { var y0 = bd[0] * H, hh = bd[1] * H; for (k = 0; k < bd[2]; k++) { var y = y0 + (r() - 0.5) * hh, x0 = r() * W, len = W * (0.25 + r() * 0.5), amp = 3 + r() * 6, g = q.createLinearGradient(0, y - 4, 0, y + 4); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.45, 'rgba(255,255,255,.35)'); g.addColorStop(0.6, 'rgba(0,0,0,.35)'); g.addColorStop(1, 'rgba(0,0,0,0)'); q.strokeStyle = g; q.lineWidth = 6; q.beginPath(); q.moveTo(x0, y); q.bezierCurveTo(x0 + len * 0.3, y - amp, x0 + len * 0.7, y + amp, x0 + len, y + (r() - 0.5) * amp); q.stroke(); q.beginPath(); q.moveTo(x0 + len - W, y); q.bezierCurveTo(x0 + len * 0.3 - W, y - amp, x0 + len * 0.7 - W, y + amp, x0 + len - W, y); q.stroke(); } }); return c; }
   var FOLD = { torso: folds(512, 512, 7101, [[1 - (0.13 - FAB.H0) / (FAB.H1 - FAB.H0), 0.07, 9], [1 - (-0.08 - FAB.H0) / (FAB.H1 - FAB.H0), 0.08, 6], [1 - (0.45 - FAB.H0) / (FAB.H1 - FAB.H0), 0.05, 4]]), arm: folds(256, 256, 7102, [[0.5, 0.14, 9], [0.2, 0.1, 3], [0.85, 0.1, 4]]), leg: folds(256, 512, 7103, [[0.47, 0.12, 10], [0.15, 0.1, 5], [0.9, 0.08, 5]]) };
   var FM = { torso: mat({ map: tex(FAB.torso, {}), bumpMap: tex(FOLD.torso, { srgb: false }), bumpScale: 0.0035, roughness: 0.86, envMapIntensity: 0.3 }), arm: mat({ map: tex(FAB.arm, {}), bumpMap: tex(FOLD.arm, { srgb: false }), bumpScale: 0.0035, roughness: 0.86, envMapIntensity: 0.3 }), leg: mat({ map: tex(FAB.leg, {}), bumpMap: tex(FOLD.leg, { srgb: false }), bumpScale: 0.0035, roughness: 0.86, envMapIntensity: 0.3 }) };
+  FM.vest = mat({ map: tex(FAB.vest, {}), alphaTest: 0.5, side: THREE.DoubleSide, bumpMap: tex(FAB.vestBump, { srgb: false }), bumpScale: 0.004, roughness: 0.78, envMapIntensity: 0.4, emissive: 0xffffff, emissiveMap: tex(FAB.vestGlow, {}), emissiveIntensity: 0.2 });
   function tubeGeo(nR, nS, flip) { var g = new THREE.BufferGeometry(), N = (nR + 1) * (nS + 1), uv = new Float32Array(N * 2), idx = [], i, j; for (i = 0; i <= nR; i++) for (j = 0; j <= nS; j++) { var k = i * (nS + 1) + j; uv[k * 2] = j / nS; uv[k * 2 + 1] = i / nR; } for (i = 0; i < nR; i++) for (j = 0; j < nS; j++) { var a = i * (nS + 1) + j, b = a + 1, c = a + nS + 1, d = c + 1; if (flip) idx.push(a, c, b, b, c, d); else idx.push(a, b, c, b, d, c); }
     g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(N * 3), 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(idx); g.userData = { nR: nR, nS: nS }; return keep(g); }
   function pw(keys, t) { var i; if (t <= keys[0][0]) return keys[0][1]; for (i = 0; i < keys.length - 1; i++) if (t <= keys[i + 1][0]) { var f = (t - keys[i][0]) / Math.max(1e-6, keys[i + 1][0] - keys[i][0]); f = f * f * (3 - 2 * f); return keys[i][1] + (keys[i + 1][1] - keys[i][1]) * f; } return keys[keys.length - 1][1]; }
@@ -13482,8 +13617,8 @@ function PFKit(ctx) {
   var TRUNK = [[-0.165, 0.0, 0.0, -0.006], [-0.157, 0.07, 0.055, -0.008], [-0.135, 0.132, 0.094, -0.012], [-0.095, 0.166, 0.117, -0.016], [-0.045, 0.179, 0.126, -0.017], [0.015, 0.178, 0.123, -0.011], [0.075, 0.169, 0.117, -0.002], [0.135, 0.161, 0.113, 0.005], [0.195, 0.162, 0.115, 0.008], [0.255, 0.170, 0.121, 0.011], [0.315, 0.180, 0.127, 0.013], [0.375, 0.188, 0.130, 0.012], [0.425, 0.192, 0.128, 0.008], [0.465, 0.192, 0.119, 0.0], [0.498, 0.184, 0.105, -0.006], [0.522, 0.16, 0.091, -0.008], [0.542, 0.117, 0.076, -0.006], [0.556, 0.074, 0.061, -0.002], [0.565, 0.056, 0.053, 0.0]];
   var TRS = (function () { var out = [], i, k; for (i = 0; i < TRUNK.length - 1; i++) for (k = 0; k < 2; k++) { var f = k / 2, a = TRUNK[Math.max(0, i - 1)], b = TRUNK[i], c = TRUNK[i + 1], d = TRUNK[Math.min(TRUNK.length - 1, i + 2)], r = [0, 1, 2, 3].map(function (m) { var t2 = f * f, t3 = t2 * f; return 0.5 * (2 * b[m] + (-a[m] + c[m]) * f + (2 * a[m] - 5 * b[m] + 4 * c[m] - d[m]) * t2 + (-a[m] + 3 * b[m] - 3 * c[m] + d[m]) * t3); }); out.push(r); } out.push(TRUNK[TRUNK.length - 1]); out[0][1] = 0; out[0][2] = 0; return out; })();
   var QA = new THREE.Quaternion(), QB = new THREE.Quaternion(), QR = new THREE.Quaternion(), VX = new THREE.Vector3(), VZ = new THREE.Vector3();
-  function sweepTrunk(geo, Pp, Qp, Pc, Qc, SP) { var nS = geo.userData.nS, pos = geo.attributes.position.array, nor = geo.attributes.normal.array, i, j, e = 0.85;
-    for (i = 0; i < TRS.length; i++) { var h = TRS[i][0], a = TRS[i][1], b = TRS[i][2], zo = TRS[i][3], w = clamp01((h - 0.06) / 0.32); w = w * w * (3 - 2 * w); TA.set(0, h, zo).applyQuaternion(Qp).add(Pp); TB.set(0, h - SP, zo).applyQuaternion(Qc).add(Pc); TP.copy(TA).lerp(TB, w); QR.copy(Qp).slerp(Qc, w); VX.set(1, 0, 0).applyQuaternion(QR); VZ.set(0, 0, 1).applyQuaternion(QR);
+  function sweepTrunk(geo, Pp, Qp, Pc, Qc, SP, inf) { var nS = geo.userData.nS, pos = geo.attributes.position.array, nor = geo.attributes.normal.array, i, j, e = 0.85;
+    for (i = 0; i < TRS.length; i++) { var h = TRS[i][0], a = TRS[i][1] + (inf || 0), b = TRS[i][2] + (inf || 0), zo = TRS[i][3], w = clamp01((h - 0.06) / 0.32); w = w * w * (3 - 2 * w); TA.set(0, h, zo).applyQuaternion(Qp).add(Pp); TB.set(0, h - SP, zo).applyQuaternion(Qc).add(Pc); TP.copy(TA).lerp(TB, w); QR.copy(Qp).slerp(Qc, w); VX.set(1, 0, 0).applyQuaternion(QR); VZ.set(0, 0, 1).applyQuaternion(QR);
       for (j = 0; j <= nS; j++) { var th = 2 * Math.PI * j / nS, sn = Math.sin(th), c = Math.cos(th), sx = (sn < 0 ? -1 : 1) * Math.pow(Math.abs(sn), e), cz = (c < 0 ? -1 : 1) * Math.pow(Math.abs(c), e), o = (i * (nS + 1) + j) * 3, lx = a * sx, lz = -b * cz, nx = sn / Math.max(a, 0.02), nz = -c / Math.max(b, 0.02), nl = Math.hypot(nx, nz) || 1; pos[o] = TP.x + VX.x * lx + VZ.x * lz; pos[o + 1] = TP.y + VX.y * lx + VZ.y * lz; pos[o + 2] = TP.z + VX.z * lx + VZ.z * lz; nx /= nl; nz /= nl; nor[o] = VX.x * nx + VZ.x * nz; nor[o + 1] = VX.y * nx + VZ.y * nz; nor[o + 2] = VX.z * nx + VZ.z * nz; } }
     geo.attributes.position.needsUpdate = true; geo.attributes.normal.needsUpdate = true; }
   /* merge the meshes of a group into one mesh per material (static parts: head, gloves, boots) */
@@ -13506,10 +13641,22 @@ function PFKit(ctx) {
       var br = rbox(hd, 0.034, 0.0065, 0.012, 0.003, M.hair); br.position.set(s * 0.034, 0.1175, 0.088); br.rotation.z = -s * 0.14; br.rotation.y = s * 0.3; });
     var nb = sph(hd, 0.012, M.skin, 12, 8); nb.scale.set(0.8, 1.6, 0.8); nb.position.set(0, 0.092, 0.096); var nt = sph(hd, 0.0135, M.skin, 14, 10); nt.scale.set(1.1, 0.9, 1.0); nt.position.set(0, 0.07, 0.104); [-1, 1].forEach(function (s) { var nw = sph(hd, 0.0085, M.skin, 10, 8); nw.position.set(s * 0.011, 0.066, 0.097); }); // the bridge, the tip and the wings of the nose
     var hair = sph(hd, 0.099, M.hair, 24, 16); hair.scale.set(0.83, 0.64, 0.92); hair.position.set(0, 0.085, -0.028); [-1, 1].forEach(function (s) { var sb = rbox(hd, 0.012, 0.03, 0.02, 0.004, M.hair); sb.position.set(s * 0.079, 0.1, 0.02); }); // hair and sideburns under the cap
-    var cap = add(hd, new THREE.SphereGeometry(0.1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), M.cap); cap.scale.set(0.85, 0.74, 1.01); cap.position.set(0, 0.123, -0.003); var band = cyl(hd, 0.086, 0.088, 0.022, 32, M.cap); band.scale.set(0.99, 1, 1.15); band.position.set(0, 0.128, -0.003); var pk = add(hd, new THREE.CylinderGeometry(0.088, 0.088, 0.006, 32, 1, false, -Math.PI / 2, Math.PI), M.cap); pk.scale.set(1.0, 1, 0.95); pk.position.set(0, 0.128, 0.05); pk.rotation.x = 0.18; var btn = sph(hd, 0.008, M.cap, 8, 6); btn.position.set(0, 0.197, 0); var vk; for (vk = 0; vk < 6; vk++) { var ang = -0.9 + vk * 0.36, vt = rbox(hd, 0.004, 0.018, 0.006, 0.0015, M.blackPl); vt.position.set(Math.sin(ang) * 0.072, 0.165, Math.cos(ang) * 0.075 - 0.003); vt.rotation.y = ang; vt.rotation.x = -0.5; } // the bump cap: shell, sweatband, peak, button, the vents over the crown
-    var mk = sph(hd, 0.058, M.mask, 24, 16); mk.scale.set(0.98, 0.82, 0.72); mk.position.set(0, 0.035, 0.075); var mkr = add(hd, new THREE.TorusGeometry(0.05, 0.006, 8, 28), M.maskSoft); mkr.scale.set(1.05, 0.85, 1); mkr.position.set(0, 0.038, 0.058); mkr.rotation.x = 0.1; // the mask body and its soft face seal
-    [-1, 1].forEach(function (s) { var fg = new THREE.Group(); hd.add(fg); fg.position.set(s * 0.06, 0.028, 0.082); fg.rotation.y = s * 0.6; fg.rotation.z = Math.PI / 2; var fb = cyl(fg, 0.027, 0.027, 0.02, 24, M.filterBody); var fr = cyl(fg, 0.0275, 0.0275, 0.005, 24, M.filter); fr.position.y = 0.0125; var fc = cyl(fg, 0.024, 0.024, 0.002, 24, M.whitePl); fc.position.y = 0.0155; var bay = cyl(fg, 0.012, 0.012, 0.008, 16, M.blackPl); bay.position.y = -0.012; }); // the A2P3 combination filters: the dark body, the pink P3 band, the white label, the bayonet
-    var vv = cyl(hd, 0.016, 0.018, 0.012, 16, M.blackPl); vv.rotation.x = Math.PI / 2; vv.position.set(0, 0.018, 0.118); var vc = cyl(hd, 0.011, 0.011, 0.004, 14, M.greyPl); vc.rotation.x = Math.PI / 2; vc.position.set(0, 0.018, 0.125); var stp = add(hd, new THREE.TorusGeometry(0.088, 0.0035, 6, 36), M.blackPl); stp.rotation.x = Math.PI / 2 - 0.6; stp.position.set(0, 0.075, -0.012); var stp2 = add(hd, new THREE.TorusGeometry(0.082, 0.003, 6, 36), M.blackPl); stp2.rotation.x = Math.PI / 2 + 0.3; stp2.position.set(0, 0.012, -0.022); // the valve and the two head straps
+    /* the hard hat of the jobsite's applicators (blue), as the site's crew wears it: shell with a rolled rim, the peak, the ridge over the crown, the cap lamp
+       on its elastic band, the chin strap. Safety spectacles below (the engine's own). No respirator: Xypex is brushed and sprayed as a slurry. */
+    (function () { var HS = M.hard || M.cap, seg = 36, rows = [[0.1235, 0.1115, 0.1255], [0.1262, 0.1136, 0.1276], [0.1295, 0.1128, 0.1268], [0.136, 0.108, 0.122], [0.152, 0.1065, 0.1205], [0.172, 0.1018, 0.1158], [0.19, 0.0925, 0.1055], [0.2055, 0.0755, 0.0872], [0.2168, 0.0525, 0.0612], [0.2232, 0.027, 0.0318], [0.2256, 0.0, 0.0]], pos = [], idx = [], a2, b2, n = rows.length;
+      for (a2 = 0; a2 < n; a2++) for (b2 = 0; b2 <= seg; b2++) { var an = b2 / seg * Math.PI * 2 + Math.PI, r0 = rows[a2]; pos.push(Math.sin(an) * r0[1], r0[0], Math.cos(an) * r0[2] - 0.004); }   /* the seam of the lathe lies at the back */
+      for (a2 = 0; a2 < n - 1; a2++) for (b2 = 0; b2 < seg; b2++) { var p0 = a2 * (seg + 1) + b2, q0 = p0 + seg + 1; idx.push(p0, p0 + 1, q0, p0 + 1, q0 + 1, q0); }
+      var sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); sg.setIndex(idx); sg.computeVertexNormals();
+      (function () { var nr = sg.attributes.normal, i2, c2; for (a2 = 0; a2 < n; a2++) { i2 = a2 * (seg + 1); for (c2 = 0; c2 < 3; c2++) { var v2 = (nr.array[i2 * 3 + c2] + nr.array[(i2 + seg) * 3 + c2]) / 2; nr.array[i2 * 3 + c2] = nr.array[(i2 + seg) * 3 + c2] = v2; } } })();   /* one normal on both sides of the seam */
+      add(hd, sg, HS);
+      var inner = add(hd, new THREE.CylinderGeometry(1, 1, 0.012, seg, 1, true), M.blackPl); inner.scale.set(0.106, 1, 0.1198); inner.position.set(0, 0.1262, -0.004);   /* the dark of the inside, seen under the rim */
+      var pk = add(hd, new THREE.CylinderGeometry(0.116, 0.116, 0.0065, 32, 1, false, -Math.PI / 2, Math.PI), HS); pk.scale.set(1.0, 1, 0.64); pk.position.set(0, 0.1272, 0.086); pk.rotation.x = 0.2;   /* the peak */
+      var rib = add(hd, new THREE.TorusGeometry(0.093, 0.0055, 6, 28, Math.PI * 0.62), HS); rib.scale.set(1.2, 1, 1.6); rib.rotation.set(0, Math.PI / 2, Math.PI * 0.19); rib.position.set(0, 0.134, -0.004);   /* the ridge from the brow over the crown */
+      var band = add(hd, new THREE.CylinderGeometry(1, 1, 0.02, seg, 1, true), M.blackPl); band.scale.set(0.1078, 1, 0.1218); band.position.set(0, 0.151, -0.004);   /* the elastic band of the lamp */
+      var lamp = rbox(hd, 0.05, 0.034, 0.026, 0.006, M.blackPl); lamp.position.set(0, 0.153, 0.124); lamp.rotation.x = 0.1; var lens = cyl(hd, 0.0145, 0.0145, 0.004, 20, M.lampLens || M.whitePl); lens.rotation.x = Math.PI / 2 + 0.1; lens.position.set(0, 0.1525, 0.1385);
+      var bez = add(hd, new THREE.TorusGeometry(0.0155, 0.0022, 6, 20), M.greyPl); bez.rotation.x = 0.1; bez.position.set(0, 0.1525, 0.1378);
+      var strap = add(hd, new THREE.TorusGeometry(0.086, 0.0028, 5, 30, Math.PI), M.blackPl); strap.rotation.z = Math.PI; strap.scale.set(1, 1.75, 1); strap.position.set(0, 0.126, 0.012);   /* the chin strap */
+    })();
     var gl = rbox(hd, 0.14, 0.036, 0.008, 0.012, M.lens); gl.position.set(0, 0.097, 0.1); var glf = rbox(hd, 0.142, 0.006, 0.012, 0.002, M.blackPl); glf.position.set(0, 0.116, 0.1); [-1, 1].forEach(function (s) { bar(hd, [s * 0.07, 0.112, 0.098], [s * 0.081, 0.108, 0.0], 0.0025, M.blackPl, 5); }); return merge(hd); }
   /* ---------- civilians: the driver (camel jacket over a white tee, washed jeans, bare hands, brown shoes) and the rider (black leather jacket with
      armour at shoulders and elbows, riding jeans with knee armour, gloves, boots and a full-face helmet). Same body as the crew, own cloth. ---------- */
@@ -13549,6 +13696,7 @@ function PFKit(ctx) {
   this.worker = function (opt) { opt = opt || {}; var w = new THREE.Group(), PELV = 0.995, SP = 0.22, HX = 0.092, HY = -0.055, T1 = 0.418, T2 = 0.415, U = 0.295, F = 0.262, GR = 0.078, SHX = 0.182, SHY = 0.255, NK = 0.345;
     var trunkG = tubeGeo(TRS.length - 1, 30, true); (function () { var uv = trunkG.attributes.uv.array, i, j; for (i = 0; i < TRS.length; i++) for (j = 0; j <= 30; j++) uv[(i * 31 + j) * 2 + 1] = (TRS[i][0] - FAB.H0) / (FAB.H1 - FAB.H0); })(); var CV = opt.civil ? civ(opt.civil) : null, FMx = CV || FM, trunk = new THREE.Mesh(trunkG, FMx.torso), arms = [0, 1].map(function () { return new THREE.Mesh(tubeGeo(32, 20), FMx.arm); }), legs = [0, 1].map(function () { return new THREE.Mesh(tubeGeo(38, 22), FMx.leg); });
     [trunk].concat(arms, legs).forEach(function (m) { m.frustumCulled = false; m.castShadow = m.receiveShadow = true; w.add(m); });
+    var vestG = null; if (!CV && FM.vest) { vestG = tubeGeo(TRS.length - 1, 30, true); vestG.attributes.uv.array.set(trunkG.attributes.uv.array); var vest = new THREE.Mesh(vestG, FM.vest); vest.frustumCulled = false; vest.castShadow = false; vest.receiveShadow = true; w.add(vest); w.userData.vest = vest; }
     var head = CV ? CV.head.clone() : (HEADC = HEADC || headG()).clone(); w.add(head); var neck = cyl(w, 0.05, 0.055, 1, 16, M.skin); var col = add(w, new THREE.TorusGeometry(0.06, 0.016, 8, 22), CV ? CV.collar : M.coverallDk); GLOVEC = GLOVEC || [glove(1), glove(0.35)]; var hands = [0, 1].map(function () { var hg = new THREE.Group(), gc = GLOVEC[0].clone(), go = GLOVEC[1].clone(); go.visible = false; hg.add(gc, go); hg.userData.grip = gc; hg.userData.open = go; w.add(hg); if (CV) hg.traverse(function (m) { if (m.isMesh) m.material = CV.hand; }); return hg; }); /* each hand carries the gripping glove and the relaxed one; the pose shows the one that fits */
     function bootT() { var b = new THREE.Group(); var sh = new THREE.Shape(); sh.moveTo(-0.07, -0.098); sh.lineTo(0.17, -0.098); sh.quadraticCurveTo(0.232, -0.097, 0.232, -0.066); sh.quadraticCurveTo(0.228, -0.034, 0.168, -0.026); sh.quadraticCurveTo(0.088, -0.014, 0.052, 0.03); sh.lineTo(0.048, 0.08); sh.lineTo(-0.056, 0.08); sh.quadraticCurveTo(-0.078, -0.02, -0.07, -0.098);
       var bg = new THREE.ExtrudeGeometry(sh, { depth: 0.082, bevelEnabled: true, bevelThickness: 0.017, bevelSize: 0.013, bevelSegments: 4, curveSegments: 10 }); bg.translate(0, 0, -0.041); bg.rotateY(-Math.PI / 2); add(b, bg, M.boot); var sl = rbox(b, 0.12, 0.022, 0.32, 0.01, M.sole); sl.position.set(0, -0.1, 0.081); var lc = rbox(b, 0.05, 0.006, 0.09, 0.003, M.blackPl); lc.position.set(0, 0.0, 0.07); lc.rotation.x = -0.55;
@@ -13588,7 +13736,7 @@ function PFKit(ctx) {
         M3.makeBasis(X, Y, Z); hands[i].quaternion.setFromRotationMatrix(M3); if (o.handRoll && o.handRoll[i]) hands[i].rotateZ(o.handRoll[i]); hands[i].position.copy(Tg).addScaledVector(Y, 0.035).addScaledVector(Z, -0.078); Wr.copy(hands[i].position);
         P0.copy(S[i]).addScaledVector(TA.set(1, 0, 0).applyQuaternion(Qc), i ? -0.07 : 0.07).addScaledVector(TB.set(0, 1, 0).applyQuaternion(Qc), 0.012); hint.set(0, 0, 1).applyQuaternion(Qc); sweepLimb(arms[i].geometry, P0, E, Wr, armProf, hint, 0.05); } /* the sleeve starts inside the shoulder of the trunk, so its rounded head reads as the deltoid */
       /* trunk, collar, neck and head (the head turns to what the man looks at, within the reach of the neck) */
-      sweepTrunk(trunkG, Pp, Qp, Pc, Qc, SP); NB.set(0, NK - 0.01, 0.0).applyQuaternion(Qc).add(Pc); col.position.copy(NB); col.quaternion.copy(Qc).multiply(Qi.setFromAxisAngle(TA.set(1, 0, 0), Math.PI / 2)); HJ.set(0, NK + 0.07, 0.012).applyQuaternion(Qc).add(Pc);
+      sweepTrunk(trunkG, Pp, Qp, Pc, Qc, SP); if (vestG) sweepTrunk(vestG, Pp, Qp, Pc, Qc, SP, 0.008); NB.set(0, NK - 0.01, 0.0).applyQuaternion(Qc).add(Pc); col.position.copy(NB); col.quaternion.copy(Qc).multiply(Qi.setFromAxisAngle(TA.set(1, 0, 0), Math.PI / 2)); HJ.set(0, NK + 0.07, 0.012).applyQuaternion(Qc).add(Pc);
       var yh = 0, ph2 = 0.18; if (o.look) { LK.copy(o.look).sub(HJ).applyQuaternion(Qi.copy(Qc).invert()); yh = Math.max(-1.0, Math.min(1.0, Math.atan2(LK.x, LK.z))); ph2 = Math.max(-0.45, Math.min(0.85, Math.atan2(-LK.y, Math.hypot(LK.x, LK.z)))); } Qh.copy(Qc).multiply(Qi.setFromEuler(EU.set(ph2, yh, 0, 'YXZ'))); head.position.copy(HJ); head.quaternion.copy(Qh);
       place(neck, NB, TA.copy(HJ).add(TB.set(0, 0.03, 0).applyQuaternion(Qh))); neck.scale.set(1, NB.distanceTo(HJ) + 0.035, 1); };
     w.userData.hands = hands; w.userData.spk = opt.spikes ? SPK : 0;
@@ -13648,9 +13796,10 @@ function PFKit(ctx) {
     [-1, 1].forEach(function (s) { bar(t, [s * 0.2, 0.62, 0.36], [s * 0.21, 0.95, 0.6], 0.015, M.steel, 14); }); bar(t, [-0.24, 0.96, 0.62], [0.24, 0.96, 0.62], 0.018, M.grip, 14); var pn = rbox(t, 0.32, 0.14, 0.08, 0.015, M.greyPl); pn.position.set(0, 0.88, 0.55); pn.rotation.x = -0.5;
     t.userData.grips = [new THREE.Vector3(-0.2, 0.96, 0.62), new THREE.Vector3(0.2, 0.96, 0.62)]; t.userData.brush = brush; t.traverse(function (m) { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return t; };
   /* ---------- the combination container (resin pail with the hardener can on top, or opened), the paddle mixer, the joint gun, the sand bucket ---------- */
-  this.pail = function (o) { o = o || {}; var t = new THREE.Group(), r = o.r || 0.15, h = o.h || 0.32; lathe(t, [[0, 0], [r * 0.9, 0], [r * 0.92, 0.01], [r, h], [r * 1.03, h], [r * 1.03, h + 0.012], [r * 0.95, h + 0.012]], o.m || M.pail, 40); var lab = add(t, new THREE.CylinderGeometry(r * 0.965, r * 0.95, h * 0.5, 40, 1, true, -0.9, 1.8), M.label); lab.position.y = h * 0.5; var stripe = add(t, new THREE.CylinderGeometry(r * 0.968, r * 0.958, h * 0.08, 40, 1, true, -0.9, 1.8), M.pailRed); stripe.position.y = h * 0.66;
-    var hd = add(t, new THREE.TorusGeometry(r * 1.02, 0.004, 6, 32, Math.PI), M.steel); hd.position.y = h * 0.9; hd.rotation.y = Math.PI / 2; hd.rotation.x = -0.25;
-    if (o.lid) { var l = cyl(t, r * 1.05, r * 1.05, 0.02, 40, o.m || M.pail); l.position.y = h + 0.01; } if (o.can) { var c = new THREE.Group(); c.position.y = h + 0.02; t.add(c); cyl(c, r * 0.55, r * 0.55, 0.14, 32, M.pailRed).position.y = 0.07; cyl(c, r * 0.57, r * 0.57, 0.012, 32, M.pailRed).position.y = 0.14; } if (o.fill) { var f = add(t, new THREE.CircleGeometry(r * 0.93, 36), o.fill, { noCast: true }); f.rotation.x = -Math.PI / 2; f.position.y = h * (o.level || 0.75); }
+  this.pail = function (o) { o = o || {}; var r = o.r || 0.15, s = r / 0.1655, h = 0.371 * s;
+    if (!M.xyLabel) { var lt = tex(XY_PACK.label('CONC', function () { lt.needsUpdate = true; }), { aniso: 8 }); M.xyLabel = mat({ map: lt, roughness: 0.5, envMapIntensity: 0.6, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }); }
+    var t = XY_PAIL.build(THREE, { s: s, open: !o.lid, white: o.m || M.pail, steel: M.steel, dark: M.blackPl, label: M.xyLabel, keep: keep });
+    if (o.can) { var c = new THREE.Group(); c.position.y = h + 0.02; t.add(c); cyl(c, r * 0.55, r * 0.55, 0.14, 32, M.pailRed).position.y = 0.07; cyl(c, r * 0.57, r * 0.57, 0.012, 32, M.pailRed).position.y = 0.14; } if (o.fill) { var f = add(t, new THREE.CircleGeometry(r * 0.9, 36), o.fill, { noCast: true }); f.rotation.x = -Math.PI / 2; f.position.y = h * (o.level || 0.75); }
     t.traverse(function (m) { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return t; };
   this.mixer = function () { var t = new THREE.Group(), G = M.paintGrey; var bd = rbox(t, 0.1, 0.26, 0.13, 0.03, M.redPl); bd.position.set(0, 0.86, 0); var vent = rbox(t, 0.104, 0.05, 0.1, 0.01, M.blackPl); vent.position.set(0, 0.95, 0); var gb = cyl(t, 0.052, 0.046, 0.09, 24, G); gb.position.set(0, 0.69, 0); [-1, 1].forEach(function (s) { bar(t, [s * 0.05, 0.79, 0], [s * 0.27, 0.79, 0], 0.017, M.grip, 14); bar(t, [s * 0.05, 0.84, 0], [s * 0.05, 0.79, 0], 0.013, M.steel, 10); }); var cb = tube(t, [[0, 1.0, -0.03], [0, 1.06, -0.1], [0.05, 0.9, -0.2]], 0.006, M.cable, 16, 6); var sp = cyl(t, 0.008, 0.008, 0.62, 12, M.steel); sp.position.y = 0.33; var pts = [], k; for (k = 0; k <= 60; k++) { var a = k / 60 * Math.PI * 4; pts.push([Math.cos(a) * 0.055, 0.04 + k / 60 * 0.08, Math.sin(a) * 0.055]); } tube(t, pts, 0.006, M.steel, 80, 8); // body, gearbox, two handles, spindle, helical paddle
     t.userData.grips = [new THREE.Vector3(-0.25, 0.79, 0), new THREE.Vector3(0.25, 0.79, 0)]; t.traverse(function (m) { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); return t; };
@@ -15472,9 +15621,10 @@ var RC = (function () {
   }
   function snapKey(idx, p) { return p != null ? idx + '@' + p : String(idx); }
   function section(key, idx, crop, p) {
-    var sn = snaps[key] && (snaps[key][snapKey(idx, p)] || (p != null ? null : snaps[key][idx])); if (sn) return crop ? '<img class="cr-snap" src="' + sn.card + '" alt="">' : figSVG(sn.fig, key, idx);
+    var sn = snaps[key] && (snaps[key][snapKey(idx, p)] || (p != null ? null : snaps[key][idx])); if (sn) { if (crop) return '<img class="cr-snap" src="' + sn.card + '" alt="">'; if (!sn.fig) sn.fig = figOf(key, idx, p); if (sn.fig) return figSVG(sn.fig, key, idx); }
     return (secView || (xyHas3D() && !window.__xyNo3D)) ? '<span class="cr-snap xy-snapwait' + (crop ? '' : ' xy-snapwait--fig') + '" role="img" aria-label="3D"></span>' : standIn(key, idx, crop);
   }
+  function figOf(id, k, p) { if (!secView || scn !== id) return null; try { var st = WP_STAGES[id], CS = WPM3D[id].camS && WPM3D[id].camS[st[k]], C = CS ? CS.cut : WPM3D[id].cam.cut; return secView.snapshot(k, 1120, 762, { noCrew: true, az: C.az, el: C.el, dist: C.dist, t: C.t, fit: 'h', tw: p }); } catch (e) { return null; } }
 
   /* ---------- system: selector, stage player, layer list ---------- */
   function stageCaption(st) {
@@ -15595,7 +15745,7 @@ var RC = (function () {
     (function next() { while (i < jobs.length && snaps[id][snapKey(jobs[i].k, jobs[i].p)]) i++; if (i >= jobs.length || scn !== id || !secView) { snapBusy = false; if (scn !== id && secView) queueSnaps(); return; }
       var J = jobs[i++], k = J.k, sk = snapKey(k, J.p); (window.requestIdleCallback || function (f) { setTimeout(f, 40); })(function () {
         if (scn !== id || !snaps[id] || !secView) { snapBusy = false; if (secView) queueSnaps(); return; }
-        try { var CS = WPM3D[id].camS && WPM3D[id].camS[st[k]], C = CS ? CS.cut : WPM3D[id].cam.cut, card = secView.snapshot(k, 660, 600, { noCrew: true, az: C.az, el: C.el, dist: C.dist * (CS ? 0.88 : 0.66), t: [C.t[0] - (CS ? 0.05 : WPM3D[id].shift || 0.1), C.t[1] + (CS ? 0.06 : 0), C.t[2]], fit: 'h', tw: J.p }), fig = secView.snapshot(k, 1120, 762, { noCrew: true, az: C.az, el: C.el, dist: C.dist, t: C.t, fit: 'h', tw: J.p }); if (card && fig) snaps[id][sk] = { card: card.url, fig: fig }; } catch (e) {} // a stage with its own view (the milling machine) is framed by it
+        try { var CS = WPM3D[id].camS && WPM3D[id].camS[st[k]], C = CS ? CS.cut : WPM3D[id].cam.cut, card = secView.snapshot(k, 660, 600, { noCrew: true, az: C.az, el: C.el, dist: C.dist * (CS ? 0.88 : 0.66), t: [C.t[0] - (CS ? 0.05 : WPM3D[id].shift || 0.1), C.t[1] + (CS ? 0.06 : 0), C.t[2]], fit: 'h', tw: J.p }); if (card) snaps[id][sk] = { card: card.url, fig: null }; } catch (e) {} // a stage with its own view (the milling machine) is framed by it
         [].forEach.call(document.querySelectorAll('#rcTl .tl-step'), function (b) { var li = procList()[+b.getAttribute('data-rcstep')]; if (li && snapKey(li.stage, li.p) === sk && snaps[id][sk]) b.querySelector('.tl-step__img').firstChild.outerHTML = section(id, k, true, li.p); });
         if (modalIdx >= 0 && modalAlt === modal) fillModal(); next();
       }, { timeout: 1500 });
@@ -15970,9 +16120,11 @@ var CA = (function () {
     o.push('</svg>'); return o.join('');
   }
   function section(key, idx, crop, p) {
-    var sn = snaps[key] && (snaps[key][snapKey(idx, p)] || (p != null ? null : snaps[key][idx])); if (sn) return crop ? '<img class="cr-snap" src="' + sn.card + '" alt="">' : figSVG(sn.fig, key, idx);
+    var sn = snaps[key] && (snaps[key][snapKey(idx, p)] || (p != null ? null : snaps[key][idx])); if (sn) { if (crop) return '<img class="cr-snap" src="' + sn.card + '" alt="">'; if (!sn.fig) sn.fig = figOf(key, idx, p); if (sn.fig) return figSVG(sn.fig, key, idx); }
     return (secView || (xyHas3D() && !window.__xyNo3D)) ? '<span class="cr-snap xy-snapwait' + (crop ? '' : ' xy-snapwait--fig') + '" role="img" aria-label="3D"></span>' : standIn(key, idx, crop);
   }
+  /* the large figure of a step (the detail window): made when it is first asked for — the cards of the step list need only the small still */
+  function figOf(id, k, p) { if (!secView || scn !== id) return null; try { var C = secView.camFor(k); return secView.snapshot(k, 1120, 762, { az: C.az, el: C.el, dist: C.dist, t: C.t, fit: 'h', tw: p }); } catch (e) { return null; } }
   window.addEventListener('themechange', function () { Object.keys(snaps).forEach(function (k) { delete snaps[k]; }); if (secView) { renderProcedure(); if (modalIdx >= 0 && modalAlt === modal) fillModal(); queueSnaps(); } }); // the stills carry the page colour of their theme: retaken after a switch
   function queueSnaps() {
     if (!secView) return; var id = scn, st = CA_STAGES[id], i = 0, jobs = []; Object.keys(snaps).forEach(function (k) { if (k !== id) delete snaps[k]; }); snaps[id] = snaps[id] || {};
@@ -15981,7 +16133,7 @@ var CA = (function () {
     (function next() { while (i < jobs.length && snaps[id][snapKey(jobs[i].k, jobs[i].p)]) i++; if (i >= jobs.length || scn !== id || !secView) { snapBusy = false; if (scn !== id && secView) queueSnaps(); return; }
       var J = jobs[i++], k = J.k, sk = snapKey(k, J.p); (window.requestIdleCallback || function (f) { setTimeout(f, 40); })(function () {
         if (scn !== id || !snaps[id] || !secView) { snapBusy = false; if (secView) queueSnaps(); return; } // the application changed meanwhile
-        try { var C = secView.camFor(k), pour = CA_STAGES[id][k] === 'pour', card = secView.snapshot(k, 660, 600, { az: C.az, el: C.el, dist: C.dist * (pour ? 1.12 : 0.92), t: [C.t[0] - 0.3, C.t[1] + (pour ? 0.55 : 0.1), C.t[2]], fit: 'h', tw: J.p, noOffset: true }), fig = secView.snapshot(k, 1120, 762, { az: C.az, el: C.el, dist: C.dist, t: C.t, fit: 'h', tw: J.p }); if (card && fig) snaps[id][sk] = { card: card.url, fig: fig }; } catch (e) {}
+        try { var C = secView.camFor(k), pour = CA_STAGES[id][k] === 'pour', card = secView.snapshot(k, 660, 600, { az: C.az, el: C.el, dist: C.dist * (pour ? 1.12 : 0.92), t: [C.t[0] - 0.3, C.t[1] + (pour ? 0.55 : 0.1), C.t[2]], fit: 'h', tw: J.p, noOffset: true }); if (card) snaps[id][sk] = { card: card.url, fig: null }; } catch (e) {}
         [].forEach.call(document.querySelectorAll('#caTl .tl-step'), function (b) { var li = procList()[+b.getAttribute('data-castep')]; if (li && snapKey(li.stage, li.p) === sk && snaps[id][sk]) b.querySelector('.tl-step__img').firstChild.outerHTML = section(id, k, true, li.p); });
         if (modalIdx >= 0 && modalAlt === modal) fillModal(); next();
       }, { timeout: 1500 });
@@ -16076,7 +16228,7 @@ var CA = (function () {
     var no = function () { $('caM3dFallback').hidden = false; document.querySelector('#caM3dStage .m3d-hint').hidden = true; document.querySelector('#caM3dStage .stage3d__cap').hidden = true; renderM3d(); };
     if (!has3D()) return no();
     setTimeout(function () { (window.requestAnimationFrame || setTimeout)(function () { try { insp = new CAView($('caM3dStage'), { scenario: xv(scn), mode: 'full' }); insp.setStage(m3d, true); insp.setXray(xray); insp.onRender = drawCallouts; window.caInspector = insp; renderM3d(); } catch (e) { if (window.console) console.error('admixture 3D', e); insp = null; no(); } }); }, 150);
-    setTimeout(function () { try { $('caDiagram').innerHTML = secStageMarkup(); secView = new CAView($('caSecStage'), { mode: 'cut', scenario: xv(scn) }); secView.setStage(stage, true); secShown = scn + ':' + stage; secView.onRender = drawSecCallouts; window.caSection = secView; drawSecCallouts(); queueSnaps(); } catch (e) { if (window.console) console.error('admixture section 3D', e); secView = null; window.__xyNo3D = true; $('caDiagram').innerHTML = section(scn, stage, false); } }, 260);
+    setTimeout(function () { try { $('caDiagram').innerHTML = secStageMarkup(); secView = new CAView($('caSecStage'), { mode: 'cut', scenario: xv(scn) }); secView.setStage(stage, true); window.caSection = secView; secShown = scn + ':' + stage; secView.onRender = drawSecCallouts; window.caSection = secView; drawSecCallouts(); queueSnaps(); } catch (e) { if (window.console) console.error('admixture section 3D', e); secView = null; window.__xyNo3D = true; $('caDiagram').innerHTML = section(scn, stage, false); } }, 260);
   }
   function secStageMarkup() { return '<div class="stage3d cr-sec ca-sec" id="caSecStage"><canvas role="img" aria-label="' + esc(tr('ca.sec.aria')) + '"></canvas><svg class="cr-co" id="caSecCo" aria-hidden="true"></svg><div class="m3d-hint" id="caSecHint">' + esc(tr('ca.sec.hint')) + '</div><div class="cr-sec__tools">' + icoBtn('caSecZoomIn', 'ca.m3d.zin', 'M12 5v14M5 12h14') + icoBtn('caSecZoomOut', 'ca.m3d.zout', 'M5 12h14') + icoBtn('caSecReset', 'ca.m3d.reset', 'M4 12a8 8 0 1 0 3-6.2M4 4v5h5') + '</div></div>'; }
   function drawSecCallouts() { calloutsFor($('caSecCo'), $('caSecStage'), $('caCoListSec'), secView); }
@@ -16887,9 +17039,9 @@ var XYNAV = (function () {
     '  for (int y = -1; y <= 1; y++) for (int x = -1; x <= 1; x++) { vec3 s = textureLod(tCur, vUv + vec2(float(x), float(y)) * uTexel, 0.0).rgb; m1 += s; m2 += s * s; }\n' +
     '  m1 /= 9.0; m2 /= 9.0; vec3 sd = sqrt(max(m2 - m1 * m1, 0.0)); vec3 h = clamp(textureLod(tHist, vUv, 0.0).rgb, m1 - 1.25 * sd, m1 + 1.25 * sd);\n' +
     '  o = vec4(mix(h, c, uAlpha), 1.0); }';
-  var F_FXAA = 'precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; uniform sampler2D tA; uniform vec2 uTexel; uniform float uOn;\n' +
+  var F_FXAA = 'precision highp float; precision highp sampler2D; in vec2 vUv; out vec4 o; uniform sampler2D tA, tDepth; uniform vec2 uTexel; uniform float uOn;\n' +
     'float lu(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }\n' +
-    'void main(){ vec3 cM = textureLod(tA, vUv, 0.0).rgb; if (uOn < 0.5) { o = vec4(cM, 1.0); return; }\n' +
+    'void main(){ gl_FragDepth = texture(tDepth, vUv).x; vec3 cM = textureLod(tA, vUv, 0.0).rgb; if (uOn < 0.5) { o = vec4(cM, 1.0); return; }\n' +
     '  vec3 cNW = textureLod(tA, vUv + vec2(-1.0, -1.0) * uTexel, 0.0).rgb, cNE = textureLod(tA, vUv + vec2(1.0, -1.0) * uTexel, 0.0).rgb, cSW = textureLod(tA, vUv + vec2(-1.0, 1.0) * uTexel, 0.0).rgb, cSE = textureLod(tA, vUv + vec2(1.0, 1.0) * uTexel, 0.0).rgb;\n' +
     '  float lNW = lu(cNW), lNE = lu(cNE), lSW = lu(cSW), lSE = lu(cSE), lM = lu(cM), lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE))), lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));\n' +
     '  vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), (lNW + lSW) - (lNE + lSE)); float red = max((lNW + lNE + lSW + lSE) * 0.03125, 0.0078125), rcp = 1.0 / (min(abs(dir.x), abs(dir.y)) + red);\n' +
@@ -16928,7 +17080,7 @@ var XYNAV = (function () {
       st.mUp = mat(F_UP, { tA: U(null), tB: U(null), uTexel: U(new T.Vector2()) });
       st.mOut = mat(F_OUT, { tColor: U(null), tDepth: dp, tAO: U(null), tSSR: U(null), tBloom: U(null), tRay: U(null), uBg: U(new T.Color()), uTexel: tx, uSunUV: U(new T.Vector2()), uExp: U(1), uTM: U(4), uAO: U(0), uCSK: U(0), uSSR: U(0), uBloom: U(0.1), uSharp: U(0.3), uCine: U(0), uRays: U(0), uTime: U(0), uWet: U(0) }); st.mOut.depthTest = true; st.mOut.depthFunc = T.AlwaysDepth; st.mOut.depthWrite = true;
       st.mLit = mat(F_LIT, base({ tL: U(null), tColor: U(null), tNrm: U(null), uHasN: U(0), tSh0: U(null), tSh1: U(null), tSh2: U(null), tSh3: U(null), uShM: U([new T.Matrix4(), new T.Matrix4(), new T.Matrix4(), new T.Matrix4()]), uShP: U([new T.Vector4(), new T.Vector4(), new T.Vector4(), new T.Vector4()]), uVI: U(new T.Matrix4()), uN: U(0), uNV: U(0), uNS: U(0), uSS: U(0), uVolK: U(0) }));
-      st.mTAA = mat(F_TAA, { tCur: U(null), tHist: U(null), uTexel: U(new T.Vector2()), uAlpha: U(1) }); st.mFX = mat(F_FXAA, { tA: U(null), uTexel: U(new T.Vector2()), uOn: U(1) });
+      st.mTAA = mat(F_TAA, { tCur: U(null), tHist: U(null), uTexel: U(new T.Vector2()), uAlpha: U(1) }); st.mFX = mat(F_FXAA, { tA: U(null), tDepth: dp, uTexel: U(new T.Vector2()), uOn: U(1) }); st.mFX.depthTest = true; st.mFX.depthFunc = T.AlwaysDepth; st.mFX.depthWrite = true;   /* the last pass to the screen carries the scene's depth (v39 moved it from mOut to here and lost it: the page-coloured ground of the guides' views then covered the whole picture at High and Ultra) */
       st.mLbl = mat(F_LBL, base({ tA: U(null), uDir: U(new T.Vector2()) })); st.mLap = mat(F_LAP, base({ tColor: U(null), tLit: U(null), uHemS: U(new T.Color()), uHemG: U(new T.Color()), uTint: U(new T.Color()), uVI: U(new T.Matrix4()), uFogD: U(0) }));
       st.lData = new Float32Array(64 * 4 * 4); st.lTex = new T.DataTexture(st.lData, 64, 4, T.RGBAFormat, T.FloatType); st.lTex.minFilter = st.lTex.magFilter = T.NearestFilter; st.lTex.needsUpdate = true;
       st.white = new T.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1); st.white.needsUpdate = true; st.black = new T.DataTexture(new Uint8Array([0, 0, 0, 0]), 1, 1); st.black.needsUpdate = true;
@@ -17112,11 +17264,15 @@ var XYNAV = (function () {
       if (st.snapW) snap(r, st);
     };
   };
+  /* a view at rest (core3d StillHQ) asks for its best picture: the full tier this machine holds, the full resolution, and no verdict of the clock on that frame */
+  FX.still = function (r, on) { var st = r && r.__xyfx; if (!st) return;
+    if (on) { if (st.hq) return; st.hq = { lvl: st.lvl, scale: st.scale, hold: st.hold }; if (FX.tier > 0 && st.lvl > 0) st.lvl = Math.max(st.lvl, Math.min(FX.tier, 3)); st.scale = 1; st.hold = true; }
+    else if (st.hq) { st.lvl = st.hq.lvl; st.scale = st.hq.scale; st.hold = st.hq.hold; st.hq = null; st.warm = Math.max(st.warm, 3); } };
   FX.set = function (pref) {
     FX.pref = pref; try { localStorage.setItem(LS, pref); } catch (e) {}
     if (FX.tier < 0) { try { window.dispatchEvent(new Event('xyfx')); } catch (e) {} return; }   /* no 3D view yet: the first one reads the preference */
     var t = pref === 'auto' ? FX.auto : NAMES[pref]; FX.tier = FX.can ? (t == null ? FX.auto : t) : 0;
-    FX.list.forEach(function (r) { var st = r.__xyfx; st.lvl = pref === 'auto' ? Math.min(FX.start, FX.tier) : FX.tier; st.scale = 1; st.hotN = st.coolN = 0; st.stepUp = 0; st.lock = ''; st.ms = 12; st.warm = 4; st.ok = true; if (FX.tier < 1) drop(st), st.A = null; if (r.userData && r.userData.redraw) { try { r.userData.redraw(); } catch (e) {} } });
+    FX.list.forEach(function (r) { var st = r.__xyfx; st.hq = null; st.hold = false; st.lvl = pref === 'auto' ? Math.min(FX.start, FX.tier) : FX.tier; st.scale = 1; st.hotN = st.coolN = 0; st.stepUp = 0; st.lock = ''; st.ms = 12; st.warm = 4; st.ok = true; if (FX.tier < 1) drop(st), st.A = null; if (r.userData && r.userData.redraw) { try { r.userData.redraw(); } catch (e) {} } });
     try { window.dispatchEvent(new Event('xyfx')); } catch (e) {}
   };
   FX.info = function () { return { tier: FX.tier, auto: FX.auto, start: FX.start, cls: FX.cls, pref: FX.pref, gpu: FX.gpu, views: FX.list.map(function (r) { var s = r.__xyfx; return { link: s.link ? [s.link.n, Math.round(s.link.ms), Math.round(s.link.max)] : 0, prog: r.info.programs ? r.info.programs.length : 0, px: r.getPixelRatio(), ok: s.ok, idle: s.idle, lvl: s.lvl, scale: s.scale, ms: Math.round(s.ms * 10) / 10, gpu: Math.round(s.gpu * 10) / 10, timed: s.timed, w: s.w, h: s.h, samples: s.samples, n: s.n }; }) }; };
@@ -17356,6 +17512,29 @@ var XYCore = (function () {
   }
   window.XYMarket = { render: render, mount: mount, watch: watch };
 })();
+
+/* ===== the pail — one moulding for the whole site =====
+   The 22.7 kg pail as the jobsite stacks it (home/src/24_stock.js): a tapered wall with the smooth band the printed label sits on, the stacking ribs and the rim
+   bead, a foot ring, the snap-on lid with its tear band and raised centre, the steel bail in its two ears with the grip against the wall. The guides build their
+   pails from the same profile (scale s: 1 = metres), so a pail is the same pail on the jobsite, in a guide's model, at a mixing station and in a simulator.
+   XY_PAIL.build(THREE, { s, open, white, steel, dark, label, fill, level, keep }) → Group (materials are the caller's; `label` is laid front and back). */
+window.XY_PAIL = (function () {
+  var PR = [[0.0, 0.004], [0.142, 0.004], [0.146, 0.0], [0.148, 0.014], [0.160, 0.27], [0.1655, 0.274], [0.1655, 0.288], [0.162, 0.292], [0.163, 0.31], [0.168, 0.314], [0.168, 0.33], [0.164, 0.334], [0.165, 0.352], [0.171, 0.356], [0.171, 0.368], [0.165, 0.371], [0.158, 0.371], [0.153, 0.35], [0.141, 0.035], [0.0, 0.035]];
+  var LID = [[0.168, 0.362], [0.17, 0.355], [0.178, 0.357], [0.1795, 0.362], [0.1795, 0.377], [0.177, 0.3835], [0.165, 0.3855], [0.156, 0.3895], [0.148, 0.3905], [0.074, 0.3915], [0.068, 0.396], [0.06, 0.398], [0.0, 0.398]];
+  function build(T, o) { o = o || {}; var s = o.s || 1, g = new T.Group(), keep = o.keep || function (x) { return x; };
+    function V(a) { return a.map(function (q) { return new T.Vector2(q[0] * s, q[1] * s); }); }
+    function put(geo, m, cast) { var me = new T.Mesh(keep(geo), m); me.castShadow = cast !== false; me.receiveShadow = true; g.add(me); return me; }
+    put(new T.LatheGeometry(V(o.open ? PR : PR.slice(0, 16)), 32), o.white); if (!o.open) put(new T.LatheGeometry(V(LID), 32), o.white);
+    if (o.label) [0, Math.PI].forEach(function (a0) { var b = put(new T.CylinderGeometry(0.1608 * s, 0.1501 * s, 0.219 * s, 24, 1, true, a0 - 0.885, 1.77), o.label, false); b.position.y = 0.1495 * s; });
+    var h = new T.Group(); h.rotation.y = Math.PI / 2; g.add(h);   /* the bail, its grip and the two ears, across the label's axis */
+    function hput(geo, m) { var me = new T.Mesh(keep(geo), m); me.castShadow = false; me.receiveShadow = true; h.add(me); return me; }
+    var bail = new T.TorusGeometry(0.172 * s, 0.003 * s, 4, 20, Math.PI); bail.rotateY(Math.PI / 2); bail.rotateZ(-1.32); bail.translate(0, 0.335 * s, 0); hput(bail, o.steel || o.white);
+    var grip = new T.CylinderGeometry(0.013 * s, 0.013 * s, 0.11 * s, 16); grip.rotateX(Math.PI / 2); grip.rotateY(Math.PI / 2); grip.rotateZ(-1.32); grip.translate(0.17 * s, 0.17 * s, 0); hput(grip, o.dark || o.steel || o.white);
+    [-1, 1].forEach(function (sg) { var ear = new T.BoxGeometry(0.02 * s, 0.04 * s, 0.03 * s); ear.translate(sg * 0.17 * s, 0.335 * s, 0); hput(ear, o.white); });
+    if (o.open && o.fill) { var f = put(new T.CircleGeometry(0.149 * s, 32), o.fill, false); f.rotation.x = -Math.PI / 2; f.position.y = (o.level == null ? 0.3 : o.level * 0.371) * s; }
+    g.userData.pail = { s: s, h: (o.open ? 0.371 : 0.398) * s, r: 0.171 * s }; return g; }
+  return { PR: PR, LID: LID, build: build };
+})();
 /* ===== What the procedure asks for in each area (parts/core/xyarea.js) =====
    One step per guide and area: what is different there — the product and its dose, the batching, the waiting times, the proof.
    It stands second in the procedure of the area's element (after the design / the assessment), with its own detail page.
@@ -17554,8 +17733,8 @@ var XYSim = (function () {
    guide (its steps, its cut model, its simulator). The site can be opened inside the guide: it is the same site, standing at that area. */
 var XYSect = (function () {
   var TX = {
-    en: { rail: 'Areas of application', kNew: 'New concrete', kOld: 'Existing concrete', expo: 'What attacks the concrete here', ans: 'The answer in this guide', proof: 'Proof', refs: 'References', member: 'Shown on', memberNote: 'the element that stands for this area in the steps, the 3D model and the simulator', other: 'Also for this area', otherRc: 'Existing concrete: coatings and repairs', otherCa: 'New concrete: the admixture', site: 'The jobsite, live', siteSub: 'The same site as at the top of the page, standing at this area — drag to look around.', siteOpen: 'Open the live jobsite at this area', siteNote: 'Real-time 3D; it loads once.', siteNo: 'The live jobsite needs WebGL; this device does not offer it.', area: 'Area', gate: 'The simulator is set in this area:' },
-    zh: { rail: '應用領域', kNew: '新建混凝土', kOld: '既有混凝土', expo: '此處混凝土所受的侵害', ans: '本指南的對策', proof: '實證', refs: '實績', member: '示範構件', memberNote: '施工步驟、3D 模型與模擬器以此構件代表本領域', other: '本領域另有', otherRc: '既有混凝土：表面塗佈與修補', otherCa: '新建混凝土：摻料', site: '工地現場（即時）', siteSub: '與頁首為同一座工地，鏡頭停在本領域——可拖曳環顧。', siteOpen: '開啟本領域的即時工地現場', siteNote: '即時 3D，僅需載入一次。', siteNo: '即時工地現場需要 WebGL，此裝置未提供。', area: '領域', gate: '模擬器以本領域為場景：' }
+    en: { rail: 'Areas of application', kNew: 'New concrete', kOld: 'Existing concrete', expo: 'What attacks the concrete here', ans: 'The answer in this guide', proof: 'Proof', refs: 'References', member: 'Shown on', memberNote: 'the element that stands for this area in the steps, the 3D model and the simulator', other: 'Also for this area', otherRc: 'Existing concrete: coatings and repairs', otherCa: 'New concrete: the admixture', site: 'The jobsite, live', subs: 'The jobs of this area', subAll: 'The whole area', siteSub: 'The same site as at the top of the page, standing at this area — drag to look around.', siteOpen: 'Open the live jobsite at this area', siteNote: 'Real-time 3D; it loads once.', siteNo: 'The live jobsite needs WebGL; this device does not offer it.', area: 'Area', gate: 'The simulator is set in this area:' },
+    zh: { rail: '應用領域', kNew: '新建混凝土', kOld: '既有混凝土', expo: '此處混凝土所受的侵害', ans: '本指南的對策', proof: '實證', refs: '實績', member: '示範構件', memberNote: '施工步驟、3D 模型與模擬器以此構件代表本領域', other: '本領域另有', otherRc: '既有混凝土：表面塗佈與修補', otherCa: '新建混凝土：摻料', site: '工地現場（即時）', subs: '本領域的工地', subAll: '領域全景', siteSub: '與頁首為同一座工地，鏡頭停在本領域——可拖曳環顧。', siteOpen: '開啟本領域的即時工地現場', siteNote: '即時 3D，僅需載入一次。', siteNo: '即時工地現場需要 WebGL，此裝置未提供。', area: '領域', gate: '模擬器以本領域為場景：' }
   };
   /* the element that stands for each area, by guide: what the 3D model of the area shows (ca/3d/dress.js, rc/src/rc3d_dress.js) */
   var MEMBER = {
@@ -17594,8 +17773,16 @@ var XYSect = (function () {
   }
   /* the window onto the site: the stage moves in when the site is already built; otherwise a button builds it on request (it is a whole jobsite) */
   function siteHTML(id) { var s = get(id), h = H(), no = !h || h.failed();
-    return '<div class="xs-site__bar"><p><b>' + esc(t('site')) + '</b>' + (s ? ' · ' + s.no + ' ' + esc(name(s)) : '') + '</p><small>' + esc(t(no ? 'siteNo' : 'siteSub')) + '</small></div><div class="xs-site__box" data-xssite-box>' + (no ? '' : '<button type="button" class="xs-site__open" data-xssite-open><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg><span>' + esc(t('siteOpen')) + '</span><small>' + esc(t('siteNote')) + '</small></button>') + '</div>';
+    return '<div class="xs-site__bar"><p><b>' + esc(t('site')) + '</b>' + (s ? ' · ' + s.no + ' ' + esc(name(s)) : '') + '</p><small>' + esc(t(no ? 'siteNo' : 'siteSub')) + '</small></div><div class="xs-site__box" data-xssite-box>' + (no ? '' : '<button type="button" class="xs-site__open" data-xssite-open><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg><span>' + esc(t('siteOpen')) + '</span><small>' + esc(t('siteNote')) + '</small></button>') + '</div>' + (no ? '' : subsHTML(s, null));
   }
+  /* the detailed jobs of the area — the manhole, the car park, the diaphragm wall under construction … — are the same models as on the home: one tap takes the stage there */
+  function subsHTML(s, on) { if (!s || !s.subs || !s.subs.length) return '<div class="xs-site__subs" data-xssubs hidden></div>'; var cur = null, i; for (i = 0; i < s.subs.length; i++) if (s.subs[i].id === on) cur = s.subs[i];
+    return '<div class="xs-site__subs" data-xssubs><p><span>' + esc(t('subs')) + '</span><button type="button" class="xs-sub' + (cur ? '' : ' is-on') + '" data-xssub="" aria-pressed="' + (!cur) + '">' + esc(t('subAll')) + '</button>' + s.subs.map(function (q) { var o2 = q.id === on; return '<button type="button" class="xs-sub' + (o2 ? ' is-on' : '') + '" data-xssub="' + q.id + '" aria-pressed="' + o2 + '">' + esc(L(q)) + '</button>'; }).join('') + '</p>' + (cur && cur.expo ? '<small>' + esc(L(cur.expo)) + '</small>' : '') + '</div>'; }
+  function subsPut(el, id, on) { var d = el && el.querySelector('[data-xssubs]'), w; if (!d) return; w = document.createElement('div'); w.innerHTML = subsHTML(get(id), on); d.parentNode.replaceChild(w.firstChild, d); }
+  var subT = 0;
+  function subGo(g, subId) { var o = hosts[g], h = H(), n = 0; if (!o || !h) return; o.asked = true; var b = o.el.querySelector('[data-xssite-open]'); if (b) b.hidden = true; sync(); subsPut(o.el, o.id, subId || null); clearInterval(subT);
+    function go() { if (!h.built() || !h.sub) return false; h.sub(o.id, subId || ''); return true; }
+    if (!go()) subT = setInterval(function () { if (go() || ++n > 240 || h.failed()) { clearInterval(subT); subT = 0; } }, 250); }
   function visible(el) { return !!(el && el.offsetParent !== null); }
   function sync() { /* the stage stands in the guide that is on screen */
     var h = H(), g, o, box; if (!h) return;
@@ -17604,13 +17791,14 @@ var XYSect = (function () {
   }
   function site(g, el, id) { if (!el) return; var o = hosts[g] || (hosts[g] = { asked: false }), h = H(); o.el = el; o.id = id;
     var box = el.querySelector('[data-xssite-box]'), keep = box && h && h.host() === box;
-    if (keep) { var p = el.querySelector('.xs-site__bar'), s = get(id); if (p && s) p.firstChild.innerHTML = '<b>' + esc(t('site')) + '</b> · ' + s.no + ' ' + esc(name(s)); }   /* the stage is in there: only the caption changes */
+    if (keep) { var p = el.querySelector('.xs-site__bar'), s = get(id); if (p && s) p.firstChild.innerHTML = '<b>' + esc(t('site')) + '</b> · ' + s.no + ' ' + esc(name(s)); subsPut(el, id, null); }   /* the stage is in there: only the caption changes */
     else el.innerHTML = siteHTML(id);
     clearTimeout(timer); timer = setTimeout(sync, 80);
   }
   /* the simulator stands in the area: its scene is set here (core/xysim.js), and its page names it */
   function gate(g, id) { try { if (typeof XYSim !== 'undefined') XYSim.apply(g, id); } catch (e) { if (window.console) console.warn('sim scene', e); } var put = function () { var d = document.querySelector('.gate__desc[data-hscat="' + g + '"]'), s = get(id); if (!d || !s) return; var p = d.parentNode.querySelector('.gate__sect'); if (!p) { p = document.createElement('p'); p.className = 'gate__sect'; d.parentNode.insertBefore(p, d.nextSibling); } var sc = typeof XYSim !== 'undefined' ? XYSim.scene(g, id, lang()) : ''; p.innerHTML = '<b>' + esc(t('area')) + ' ' + s.no + ' · ' + esc(name(s)) + '</b> ' + (sc ? esc(t('gate')) + ' ' + esc(sc) + (lang() === 'zh' ? '。' : '.') : ''); }; put(); clearTimeout(gateT[g]); gateT[g] = setTimeout(put, 400); }
-  document.addEventListener('click', function (e) { var b = e.target.closest ? e.target.closest('[data-xssite-open],[data-xsgo]') : null; if (!b) return;
+  document.addEventListener('click', function (e) { var b = e.target.closest ? e.target.closest('[data-xssite-open],[data-xsgo],[data-xssub]') : null; if (!b) return;
+    if (b.hasAttribute('data-xssub')) { var g2; for (g2 in hosts) if (hosts[g2].el && hosts[g2].el.contains(b)) subGo(g2, b.getAttribute('data-xssub')); return; }
     if (b.hasAttribute('data-xsgo')) { var a = b.getAttribute('data-xsgo').split('|'); try { if (window.XYGO) window.XYGO(a[0], a[1] || null, a[2] || null, a[3] || undefined); } catch (x) {} return; }
     var g; for (g in hosts) if (hosts[g].el && hosts[g].el.contains(b)) { hosts[g].asked = true; b.hidden = true; sync(); } });
   window.addEventListener('hashchange', function () { clearTimeout(timer); timer = setTimeout(sync, 160); });
@@ -23222,9 +23410,13 @@ var XH_API = (function () {
   var shown0 = XH_API.shown;
   XH_API.shown = function (on) { if (on && where) back(); shown0(on); if (!on && where) XJ.show(true); };   /* inside a guide the picture keeps running while it is on screen */
   XH_API.sect = {
-    list: function () { return SECTORS.map(function (s, i) { return { id: s.id, no: (i < 9 ? '0' : '') + (i + 1), en: s.en, zh: s.zh, short: s.short, expo: s.expo, ans: s.ans, proof: s.proof, refs: s.refs.map(function (r) { return [r[0], XCOUNTRY[r[1]] || null]; }) }; }); },
+    list: function () { return SECTORS.map(function (s, i) { return { id: s.id, no: (i < 9 ? '0' : '') + (i + 1), en: s.en, zh: s.zh, short: s.short, expo: s.expo, ans: s.ans, proof: s.proof, refs: s.refs.map(function (r) { return [r[0], XCOUNTRY[r[1]] || null]; }), subs: (s.subs || []).map(function (q) { return { id: q.id, en: q.en, zh: q.zh, expo: q.expo }; }) }; }); },
     cur: function () { var c = XU.cur(); return sectorOf(curId) ? curId : (c ? c.id : null); },   /* the last area chosen, on the site or in a guide */
     set: set, show: show, back: back,
+    /* the detailed jobs of an area (the manhole, the car park, the diaphragm wall …) are entered from a guide as well: the stage goes to the area and on to the job;
+       no id (or one the area does not have) returns to the area as a whole */
+    sub: function (secId, subId) { if (!XJ.S.built || !sectorOf(secId)) return false; var c = XU.cur(); if (!c || c.id !== secId) XU.goto(secId, { dur: 0 }); try { return XU.sub(subId || '', { focus: false }); } catch (e) { return false; } },
+    curSub: function () { var q = XU.curSub ? XU.curSub() : null; return q ? q.id : null; },
     built: function () { return !!XJ.S.built; }, failed: function () { return !!(XJ.S.failed || XU.failed) || typeof HAS3D === 'undefined' || !HAS3D; }, host: function () { return where; }
   };
 })();
@@ -23337,7 +23529,7 @@ var XYCTX = (function () {
   function can(id) { return !!AT[id] && typeof HAS3D !== 'undefined' && HAS3D && !window.FAST3D && !(XJ.S && XJ.S.failed) && !window.XYCTX_OFF; }
   function ready() { return !!(XJ.S && XJ.S.built && !XJ.S.failed); }
   function detach(scene) { var st = scene.userData.xyctx; if (!st) return; scene.userData.xyctx = null; if (st.g) { scene.remove(st.g); } if (st.sky) { if (st.sky.parent) st.sky.parent.remove(st.sky); st.sky.geometry.dispose(); st.sky.material.dispose(); }   /* (the sky of the site left behind in the scene would be drawn again with every further bay) */ if (st.env && st.env.dispose) st.env.dispose(); if (st.timer) clearInterval(st.timer); if (st.ghost) st.ghost.dispose();
-    var q = st.q; if (q.sun && q.sun.userData.ground) { q.sun.userData.ground.visible = true; q.sun.userData.shadow.visible = true; } scene.fog = null; if (st.env0 !== undefined) scene.environment = st.env0; q.cam.far = st.far0; q.cam.updateProjectionMatrix(); if (st.mats) st.mats.forEach(function (m) { m.dispose(); }); }
+    var q = st.q; if (q.sun && q.sun.userData.ground) { q.sun.userData.ground.visible = true; q.sun.userData.shadow.visible = true; } scene.fog = null; if (st.env0 !== undefined) scene.environment = st.env0; if (st.far0 != null) { q.cam.far = st.far0; q.cam.updateProjectionMatrix(); }   /* only what build() changed is put back: a context that was attached and never built (the view was not looked at before the area was changed again) left the camera without a far plane — every picture of that view, and every step picture taken from it, was empty */ if (st.mats) st.mats.forEach(function (m) { m.dispose(); }); }
   /* the member of a model on the site: its own sizes and views there (the model is built from these) */
   function variant(id, P) { var at = AT[id]; if (!at || !at.P || !can(id)) return P; var o = Object.create(P), k; for (k in at.P) o[k] = at.P[k]; return o; }
   /* the ground of the site along the sawn plane of a model, in the model's units: [[z, y], …] from z0 to z1 */
@@ -23381,14 +23573,15 @@ var XYCTX = (function () {
   function attach(view, q) {
     detach(q.scene); if (q.panel || !can(q.id)) return false;
     var st = { q: q, at: AT[q.id], g: null, pairs: [], view: view, tries: 0 }; q.scene.userData.xyctx = st;
-    function go() { if (q.scene.userData.xyctx !== st) return; try { build(st); } catch (e) { try { console.warn('site context', q.id, e); } catch (x) {} return; }
+    function wait(on) { var h = q.host; if (!h || !h.classList) return; h.classList.toggle('is-sitewait', !!on); if (on) h.setAttribute('data-sitewait', typeof LANG !== 'undefined' && LANG === 'zh' ? '工地場景載入中…' : 'Bringing in the jobsite…'); }   /* the element stands; the site round it is on the way */
+    function go() { if (q.scene.userData.xyctx !== st) return; try { build(st); } catch (e) { wait(false); try { console.warn('site context', q.id, e); } catch (x) {} return; } wait(false);
       try { clearBay(q.id); } catch (e3) {} if (view && view.onSite) { try { view.onSite(true); } catch (e2) {} } q.redraw(); }
     /* The site is brought in when the model is really looked at: its picture has stood in the window for a moment. Whoever only scrolls past it, or never
        comes to it, is not made to wait for a site to be built. */
     function seen() { var h = q.host, r = h && h.getBoundingClientRect ? h.getBoundingClientRect() : null; return !r || (r.width > 0 && r.bottom > 40 && r.top < (window.innerHeight || 800) - 40); }
     if (ready() && seen()) go();
-    else st.timer = setInterval(function () { if (q.scene.userData.xyctx !== st || st.tries > 480 || (XJ.S && XJ.S.failed)) { clearInterval(st.timer); st.timer = 0; return; }
-      if (!st.on) { if (!seen()) { st.dwell = 0; return; } st.dwell = (st.dwell || 0) + 1; if (st.dwell < 3) return; st.on = true; if (!ready()) { try { XH_API.start(); } catch (e) {} } }
+    else st.timer = setInterval(function () { if (q.scene.userData.xyctx !== st || st.tries > 480 || (XJ.S && XJ.S.failed)) { clearInterval(st.timer); st.timer = 0; wait(false); return; }
+      if (!st.on) { if (!seen()) { st.dwell = 0; return; } st.dwell = (st.dwell || 0) + 1; if (st.dwell < 3) return; st.on = true; wait(true); if (!ready()) { try { XH_API.start(); } catch (e) {} } }
       st.tries++; if (ready()) { clearInterval(st.timer); st.timer = 0; go(); } }, 250);
     return true;
   }
