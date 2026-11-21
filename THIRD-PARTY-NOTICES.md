@@ -32,7 +32,7 @@ https://ssd.jpl.nasa.gov/planets/approx_pos.html
 ## Fonts in fonts/ (used to generate Word and PDF documents)
 
 - Roboto — Copyright 2011 Google Inc. Licensed under the Apache License, Version 2.0 (`fonts/LICENSE-Roboto-Apache-2.0.txt`).
-- Noto Sans TC — Copyright (c) 2014-2021 Adobe, with Reserved Font Name 'Source'. Licensed under the SIL Open Font License, Version 1.1 (`fonts/LICENSE-NotoSansTC-OFL-1.1.txt`).
+- Noto Sans TC — Copyright (c) 2014-2021 Adobe, with Reserved Font Name 'Source'. Licensed under the SIL Open Font License, Version 1.1 (`fonts/LICENSE-NotoSansTC-OFL-1.1.txt`). The two files `fonts/noto-tc-400.ttf` and `fonts/noto-tc-700.ttf` are a modified version: the vertical metrics tables (`vhea`, `vmtx`) were removed on 2026-11-20, because browsers refused the files over an inconsistency between them; glyphs, names and all other tables are unchanged.
 
 ## Libraries loaded at run time (not redistributed here)
 
